@@ -1,0 +1,31 @@
+-- AUTO_INCREMENT для таблицы `admin_users`
+ALTER TABLE `admin_users`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+
+-- AUTO_INCREMENT для таблицы `atributes`
+ALTER TABLE `atributes`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=105;
+
+-- AUTO_INCREMENT для таблицы `bundles`
+ALTER TABLE `bundles`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=594;
+
+-- AUTO_INCREMENT для таблицы `clusters`
+ALTER TABLE `clusters`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+
+-- AUTO_INCREMENT для таблицы `directions`
+ALTER TABLE `directions`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=38;
+
+-- AUTO_INCREMENT для таблицы `establishments`
+ALTER TABLE `establishments`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=74;
+
+-- AUTO_INCREMENT для таблицы `metrics`
+ALTER TABLE `metrics`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=238;
+
+-- AUTO_INCREMENT для таблицы `programs`
+ALTER TABLE `programs`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=194;
