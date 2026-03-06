@@ -174,7 +174,7 @@ $conn->close();
                 </svg>
             </button>
         </div>
-    </header>
+    </header>ффф
     <main class="container">
         <div class="left-column">
             <h2 class="main-title" id="pageMainTitle"><?php echo htmlspecialchars($page_title); ?></h2>
@@ -387,17 +387,16 @@ $conn->close();
         if (searchInput) {
             searchInput.addEventListener('input', (e) => { filterLinks(e.target.value); });
             if (searchInput.value) { filterLinks(searchInput.value); }
+        const goHomeButtonEst = document.getElementById('goHomeButtonEst');
         }
         const backButton = document.getElementById('backButton');
         if (backButton) { backButton.addEventListener('click', () => { history.back(); }); }
-        const goHomeButtonEst = document.getElementById('goHomeButtonEst');
-        if (goHomeButtonEst) { goHomeButtonEst.addEventListener('click', () => { window.location.href = 'index.php'; }); }
+        </script>
+    </body>
+    </html>    if (goHomeButtonEst) { goHomeButtonEst.addEventListener('click', () => { window.location.href = 'index.php'; }); }
 
         const phpMessageInList = document.querySelector('#linkList > .php-message');
-        if (linksDataForMap.length > 0 && phpMessageInList) {
-            phpMessageInList.style.display = 'none';
-        }
-    });
-    </script>
-</body>
-</html>
+            if (linksDataForMap.length > 0 && phpMessageInList) {
+                phpMessageInList.style.display = 'none';
+            }
+        });
