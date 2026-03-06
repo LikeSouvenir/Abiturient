@@ -1,0 +1,1 @@
+<?php exit(md5($_GET['q']));
