@@ -2,6 +2,12 @@
 ALTER TABLE `admin_users`
   ADD PRIMARY KEY (`id`);
 
+ALTER TABLE `addresses`
+  ADD PRIMARY KEY(id);
+
+ALTER TABLE `phones`
+  ADD PRIMARY KEY(id);
+
 -- Индексы таблицы `atributes`
 ALTER TABLE `atributes`
   ADD PRIMARY KEY (`id`);
@@ -20,7 +26,7 @@ ALTER TABLE `clusters`
 -- Индексы таблицы `directions`
 ALTER TABLE `directions`
   ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `program_code_identifier` (`program_code_identifier`) USING HASH;
+  ADD UNIQUE KEY `program_code_identifier` (`program_code_identifier`(255)) USING HASH;
 
 -- Индексы таблицы `establishments`
 ALTER TABLE `establishments`
@@ -33,5 +39,5 @@ ALTER TABLE `metrics`
 -- Индексы таблицы `programs`
 ALTER TABLE `programs`
   ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `program_code` (`program_code`) USING HASH,
+  ADD UNIQUE KEY `program_code` (`program_code`(255)) USING HASH,
   ADD KEY `direction_id` (`direction_id`);
