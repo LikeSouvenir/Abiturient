@@ -46,6 +46,8 @@ async function read() {
     const res = data.slice(splitInd + 6, data.length - 4).replaceAll('(', "").replace('\n', "").split('\),\n')
 
     let key = 1;
+    let keyToAddresses = res.length;
+    let keyToPhones = res.length;
     for (let elem of res) {
       let item = elem.split("', '")
       item[0] = item[0].replace(" \'", '')
@@ -54,12 +56,24 @@ async function read() {
       item = item.flat()
       item[8] = item[8].replace("'", '')
 
-      addresses.push([
-        key, item[0], item[3], 0, item[8] 
-      ])
-      phones.push([
-        key, item[0], item[6], 0, item[8]
-      ])
+      if (item[3].indexOf(';') === -1) {
+        addresses.push([key, item[0], item[3].trim(), 0, item[8] ])
+      } else {
+        item[3].split(';').forEach(element => {
+          addresses.push([keyToAddresses++, item[0], element.trim(), 0, item[8]])
+        });
+      }
+      if (item[6].indexOf(';') !== -1) {
+        item[6].split(';').forEach(element => {
+          phones.push([keyToPhones++, item[0], element.trim(), 0, item[8]])
+        });
+      } else if (item[6].indexOf(',') !== -1) {
+        item[6].split(',').forEach(element => {
+          phones.push([keyToPhones++, item[0], element.trim(), 0, item[8]])
+        });
+      } else {
+        phones.push([key, item[0], item[6].trim(), 0, item[8]])
+      }
       
       item[3] = null;
       item[6] = null;
@@ -67,7 +81,7 @@ async function read() {
       ++key;
       resultData.push(item.filter(e => e !== null))
     }
-    console.log("read--read--read--read")
+    console.log("read--read--read--read", '\n', 'keyToAddresses:', keyToAddresses, 'keyToPhones:', keyToPhones)
   })
   setTimeout(async () => {
     await write(est_base, resultData, establishment_path)
