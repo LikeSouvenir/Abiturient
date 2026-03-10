@@ -60,16 +60,16 @@ async function read() {
         addresses.push([key, item[0], item[3].trim(), 0, item[8] ])
       } else {
         item[3].split(';').forEach(element => {
-          addresses.push([keyToAddresses++, item[0], element.trim(), 0, item[8]])
+          addresses.push([++keyToAddresses, item[0], element.trim(), 0, item[8]])
         });
       }
       if (item[6].indexOf(';') !== -1) {
         item[6].split(';').forEach(element => {
-          phones.push([keyToPhones++, item[0], element.trim(), 0, item[8]])
+          phones.push([++keyToPhones, item[0], element.trim(), 0, item[8]])
         });
       } else if (item[6].indexOf(',') !== -1) {
         item[6].split(',').forEach(element => {
-          phones.push([keyToPhones++, item[0], element.trim(), 0, item[8]])
+          phones.push([++keyToPhones, item[0], element.trim(), 0, item[8]])
         });
       } else {
         phones.push([key, item[0], item[6].trim(), 0, item[8]])
