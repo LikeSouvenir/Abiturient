@@ -24,10 +24,10 @@ function getProgramsByEstablishment($conn, $establishment_id) {
             e.id as establishment_id,
             e.name as establishment_name,
             e.logo_path as establishment_logo_path,
-            e.address as establishment_main_address,
+            ad.address as establishment_main_address,
             e.latitude as establishment_main_latitude,
             e.longitude as establishment_main_longitude,
-            e.phone as establishment_phone,
+            ph.phone as establishment_phone,
             e.website as establishment_website,
             p.id as program_id,
             p.name as program_name,
@@ -37,6 +37,8 @@ function getProgramsByEstablishment($conn, $establishment_id) {
         FROM bundles b
         JOIN establishments e ON b.establishment_id = e.id
         JOIN programs p ON b.program_id = p.id
+        JOIN phones ph ON e.id=ph.establishment_id
+        JOIN addresses ad ON e.id= ad.establishment_id
         LEFT JOIN clusters cls ON b.cluster_id = cls.id
         WHERE b.establishment_id = ?
         ORDER BY p.name

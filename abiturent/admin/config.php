@@ -4,14 +4,20 @@ ini_set('display_errors', 1);
 
 define('DB_SERVER', 'localhost');
 define('DB_USERNAME', 'root'); 
-define('DB_PASSWORD', '8778214372'); 
-define('DB_NAME', 'abiturent_v2');
+define('DB_PASSWORD', 'ваш_пароль'); 
+define('DB_NAME', 'abiturent_v3');
 
 $conn = new mysqli(DB_SERVER, DB_USERNAME, DB_PASSWORD);
 
+
+// Проверка подключения к серверу MySQL
 if ($conn->connect_error) {
-    die("ERROR: Could not connect. " . $conn->connect_error);
+    die("Ошибка подключения к серверу MySQL: " . $conn->connect_error);
 }
+// Проверка выбора базы данных
+if (!$conn->select_db(DB_NAME)) {
+    die("Ошибка выбора базы данных: " . $conn->error);
+} 
 
 $sql_create_db = "CREATE DATABASE IF NOT EXISTS " . DB_NAME . " CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci";
 if (!$conn->query($sql_create_db)) {
