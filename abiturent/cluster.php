@@ -4,25 +4,28 @@ require_once __DIR__ . '/admin/config.php';
 require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/data_processing.php';
 
-// Обработка GET-параметров
-$establishment_id_filter = isset($_GET['establishment_id']) ? (int)trim($_GET['establishment_id']) : null;
-$page_title = 'Программы учебного заведения';
+// Обработка GET-параметров - теперь работаем с cluster_id
+$cluster_id = isset($_GET['cluster_id']) ? (int)trim($_GET['cluster_id']) : null;
+$page_title = 'Программы кластера';
 $links_data = [];
-$current_establishment_name = null;
+$current_cluster_name = null;
 $json_options = JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE;
 
-if ($establishment_id_filter) {
-    $current_establishment_name = getEstablishmentName($conn, $establishment_id_filter);
-    if ($current_establishment_name) {
-        $page_title = "Программы: " . htmlspecialchars($current_establishment_name);
-        $raw_bundles_data = getProgramsByEstablishment($conn, $establishment_id_filter);
+if ($cluster_id) {
+    // Получаем название кластера (нужно создать эту функцию или получить по-другому)
+    $current_cluster_name = getClusterName($conn, $cluster_id);
+    
+    if ($current_cluster_name) {
+        $page_title = "Программы кластера: " . htmlspecialchars($current_cluster_name);
+        // Получаем программы по cluster_id (нужно создать эту функцию)
+        $raw_bundles_data = getProgramsByCluster($conn, $cluster_id);
         $links_data = processProgramData($raw_bundles_data);
     } else {
-        $page_title = "Учебное заведение не найдено";
-        $establishment_id_filter = null;
+        $page_title = "Кластер не найден";
+        $cluster_id = null;
     }
 } else {
-    $page_title = "Учебное заведение не выбрано";
+    $page_title = "Кластер не выбран";
 }
 
 $conn->close();
@@ -34,12 +37,12 @@ $conn->close();
     <div class="left-column">
         <h2 class="main-title" id="pageMainTitle"><?= htmlspecialchars($page_title) ?></h2>
         <div class="link-list" id="linkList">
-            <?php if (!$establishment_id_filter): ?>
-                <p class="no-results php-message">Учебное заведение не выбрано. Пожалуйста, укажите ID учебного заведения.</p>
-            <?php elseif (empty($links_data) && $current_establishment_name): ?>
-                <p class="no-results php-message">В учебном заведении "<?= htmlspecialchars($current_establishment_name) ?>" пока нет доступных программ.</p>
-            <?php elseif (empty($links_data) && !$current_establishment_name): ?>
-                <p class="no-results php-message">Учебное заведение не найдено или не имеет программ.</p>
+            <?php if (!$cluster_id): ?>
+                <p class="no-results php-message">Кластер не выбран. Пожалуйста, укажите ID кластера.</p>
+            <?php elseif (empty($links_data) && $current_cluster_name): ?>
+                <p class="no-results php-message">В кластере "<?= htmlspecialchars($current_cluster_name) ?>" пока нет доступных программ.</p>
+            <?php elseif (empty($links_data) && !$current_cluster_name): ?>
+                <p class="no-results php-message">Кластер не найден или не имеет программ.</p>
             <?php else: ?>
                 <?php foreach ($links_data as $link): ?>
                     <?php include __DIR__ . '/templates/program_card.php'; ?>

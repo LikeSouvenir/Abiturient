@@ -19,7 +19,7 @@ function initMap() {
     try {
         yandexMapInstance = new ymaps.Map('map', {
             center: [59.9343, 30.3351],
-            zoom: 10,
+            zoom: 1,
             controls: ['zoomControl', 'typeSelector', 'fullscreenControl', 'geolocationControl']
         });
         placemarksCollection = new ymaps.GeoObjectCollection({}, { preset: 'islands#blueDotIcon' });
