@@ -205,4 +205,95 @@ function getProgramsByCluster($conn, $cluster_id) {
     
     return $data;
 }
+
+/**
+ * Получить информацию о направлении по коду
+ */
+function getDirectionByCode($conn, $direction_code_identifier) {
+    $stmt_dir = $conn->prepare("SELECT id, name FROM directions WHERE program_code_identifier = ?");
+    $stmt_dir->bind_param("s", $direction_code_identifier);
+    $stmt_dir->execute();
+    $direction_result = $stmt_dir->get_result();
+    $direction = $direction_result->fetch_assoc();
+    
+    $direction_result->close();
+    $stmt_dir->close();
+    
+    return $direction;
+}
+
+/**
+ * Получить программы по ID направления
+ */
+function getProgramsByDirection($conn, $direction_id) {
+    $programs_list = [];
+    
+    $stmt_prog = $conn->prepare("
+        SELECT
+            p.id, p.name, p.program_code, p.keywords, p.attributes, p.image_path,
+            COUNT(DISTINCT b.establishment_id) as num_establishments,
+            SUM(CASE WHEN b.cluster_id IS NOT NULL THEN 1 ELSE 0 END) > 0 as is_professionalitet_related
+        FROM
+            programs p
+        LEFT JOIN
+            bundles b ON p.id = b.program_id
+        WHERE
+            p.direction_id = ?
+        GROUP BY
+            p.id, p.name, p.program_code, p.keywords, p.attributes, p.image_path
+        HAVING
+            COUNT(DISTINCT b.establishment_id) > 0
+        ORDER BY
+            p.name
+    ");
+    
+    $stmt_prog->bind_param("i", $direction_id);
+    $stmt_prog->execute();
+    $programs_result = $stmt_prog->get_result();
+    
+    while ($program_row = $programs_result->fetch_assoc()) {
+        $program_row['image_path'] = $program_row['image_path'] 
+            ? "uploads/programs/" . $program_row['image_path'] 
+            : "uploads/programs/placeholder.svg";
+        $program_row['attributes_array'] = !empty($program_row['attributes']) 
+            ? array_map('trim', explode(',', $program_row['attributes'])) 
+            : [];
+        $programs_list[] = $program_row;
+    }
+    
+    $programs_result->close();
+    $stmt_prog->close();
+    
+    return $programs_list;
+}
+
+/**
+ * Получить теги для отображения
+ */
+function getProgramTags($program) {
+    $tags_html = '';
+    
+    if ($program['is_professionalitet_related']) {
+        $tags_html .= '<span class="attribute-tag professionalitet-tag">Профессионалитет</span>';
+    }
+    
+    if (!empty($program['attributes_array'])) {
+        foreach ($program['attributes_array'] as $attr) {
+            $attr_lower = mb_strtolower(trim($attr));
+            $tag_class = 'attribute-tag';
+            
+            if (strpos($attr_lower, '2 огэ') !== false) {
+                continue;
+            }
+            
+            if (strpos($attr_lower, "профессия") !== false) {
+                $tag_class .= ' profession';
+            }
+            
+            $tags_html .= '<span class="' . $tag_class . '">' . htmlspecialchars($attr) . '</span>';
+        }
+    }
+    
+    return $tags_html;
+}
 ?>

@@ -305,7 +305,7 @@ $json_options = JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JS
                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20px" height="20px">
                     <path d="M10 2a8 8 0 0 1 6.32 12.9L20.69 18.3a1 1 0 0 1-1.41 1.41l-4.39-4.38A8 8 0 1 1 10 2zm0 2a6 6 0 1 0 0 12A6 6 0 0 0 10 4z"/>
                 </svg>
-                <input type="text" class="search-input" id="mainSearchInput" placeholder="Поиск по направлениям, программам и кластерам...">
+                <input type="text" class="search-input" id="mainSearchInput" placeholder="Поиск по направлениям и программам">
             </div>
              <button class="header-button filter-button" title="Фильтры (не реализовано)">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20px" height="20px">

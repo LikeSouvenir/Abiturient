@@ -12,19 +12,44 @@ $error_message = '';
 
 if (isset($_POST['admin_login'])) {
     $username = trim($_POST['username']);
-    $password = md5(trim($_POST['password']));
-    $user = $conn->query("SELECT * FROM admin_users WHERE username='$username' AND password='$password' LIMIT 1")->fetch_assoc();
-    if($user) {
-        $_SESSION['admin_loggedin'] = true;
-        $_SESSION['admin_id'] = $user['id'];
-        $_SESSION['admin_username'] = $user['username'];
-        header("Location: index.php?tab=" . ($current_tab == 'login' ? 'directions' : $current_tab) );
-        exit;
+    $password = $_POST['password']; // НЕ хешируем здесь!
+    
+    error_log("Login attempt - Username: " . $username);
+    error_log("Login attempt - Password from form: " . $password);
+    
+    $stmt = $conn->prepare("SELECT * FROM admin_users WHERE username = ?");
+    $stmt->bind_param("s", $username);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    if ($result->num_rows > 0) {
+        $user = $result->fetch_assoc();
+        
+        error_log("Stored hash: " . $user['password']);
+        error_log("Password from form: " . $password);
+        
+        // Просто сравниваем, без дополнительного хеширования
+        if ($user['password'] === $password) {
+            $_SESSION['admin_loggedin'] = true;
+            $_SESSION['admin_id'] = $user['id'];
+            $_SESSION['admin_username'] = $user['username'];
+            
+            error_log("Login successful for user: " . $username);
+            
+            header("Location: index.php?tab=" . ($current_tab == 'login' ? 'directions' : $current_tab));
+            exit;
+        } else {
+            error_log("Password mismatch for user: " . $username);
+            $_SESSION['login_error'] = "Неверный логин или пароль.";
+        }
     } else {
+        error_log("User not found: " . $username);
         $_SESSION['login_error'] = "Неверный логин или пароль.";
-        header("Location: index.php?tab=login");
-        exit;
     }
+    
+    $stmt->close();
+    header("Location: index.php?tab=login");
+    exit;
 }
 
 if ($current_tab == 'logout') {

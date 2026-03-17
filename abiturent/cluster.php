@@ -12,12 +12,12 @@ $current_cluster_name = null;
 $json_options = JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE;
 
 if ($cluster_id) {
-    // Получаем название кластера (нужно создать эту функцию или получить по-другому)
+    // Получаем название кластера
     $current_cluster_name = getClusterName($conn, $cluster_id);
     
     if ($current_cluster_name) {
-        $page_title = "Программы кластера: " . htmlspecialchars($current_cluster_name);
-        // Получаем программы по cluster_id (нужно создать эту функцию)
+        $page_title = "\"" . htmlspecialchars($current_cluster_name) . "\"";
+        // Получаем программы по cluster_id
         $raw_bundles_data = getProgramsByCluster($conn, $cluster_id);
         $links_data = processProgramData($raw_bundles_data);
     } else {

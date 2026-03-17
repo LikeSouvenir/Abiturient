@@ -44,7 +44,7 @@ $conn->close();
                 <p class="no-results">Подходящие варианты не найдены.</p>
             <?php else: ?>
                 <?php foreach ($links_data as $link): ?>
-                    <?php include __DIR__ . '/templates/establishment_card.php'; ?>
+                    <?php include __DIR__ . '/templates/program_card.php'; ?>
                 <?php endforeach; ?>
             <?php endif; ?>
         </div>

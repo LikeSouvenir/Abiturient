@@ -1,6 +1,7 @@
 let yandexMapInstance;
 let placemarksCollection;
 let linksDataForMap = [];
+let mapInitialized = false;
 
 // Получаем данные карты
 try {
@@ -15,6 +16,54 @@ try {
     linksDataForMap = [];
 }
 
+function loadYandexMapsAPI() {
+    return new Promise((resolve, reject) => {
+        // Проверяем, загружено ли уже API
+        if (window.ymaps) {
+            resolve();
+            return;
+        }
+
+        // Проверяем, идет ли уже загрузка
+        if (document.querySelector('script[src*="api-maps.yandex.ru"]')) {
+            // Ждем загрузки
+            const checkInterval = setInterval(() => {
+                if (window.ymaps) {
+                    clearInterval(checkInterval);
+                    resolve();
+                }
+            }, 100);
+            
+            // Таймаут на случай ошибки
+            setTimeout(() => {
+                clearInterval(checkInterval);
+                reject(new Error('Timeout loading Yandex Maps API'));
+            }, 10000);
+            
+            return;
+        }
+
+        // Создаем тег скрипта для загрузки API
+        const script = document.createElement('script');
+        script.src = 'https://api-maps.yandex.ru/2.1/?apikey=ВАШ_КЛЮЧ_API&lang=ru_RU&loadByRequire=1';
+        script.type = 'text/javascript';
+        
+        script.onload = () => {
+            // Ждем инициализации ymaps
+            const checkYmaps = setInterval(() => {
+                if (window.ymaps) {
+                    clearInterval(checkYmaps);
+                    resolve();
+                }
+            }, 50);
+        };
+        
+        script.onerror = () => reject(new Error('Failed to load Yandex Maps API'));
+        
+        document.head.appendChild(script);
+    });
+}
+
 function initMap() {
     const mapElement = document.getElementById('map');
     
@@ -23,6 +72,10 @@ function initMap() {
         console.error("Map element not found");
         return;
     }
+    
+    // Предотвращаем повторную инициализацию
+    if (mapInitialized) return;
+    mapInitialized = true;
     
     const initialNoDataMsgMap = mapElement.querySelector('.php-map-message');
 
@@ -279,7 +332,7 @@ function filterLinks(searchTerm) {
 }
 
 // Инициализация после загрузки DOM
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     // Инициализация поиска
     const searchInput = document.getElementById('linkSearchInput');
     if (searchInput) {
@@ -309,14 +362,15 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
-    // Инициализация карты
-    if (typeof ymaps !== 'undefined') {
+    // Загружаем API и инициализируем карту
+    try {
+        await loadYandexMapsAPI();
         ymaps.ready(initMap);
-    } else {
-        console.warn("Yandex Maps API not loaded");
+    } catch (error) {
+        console.error("Failed to load Yandex Maps API:", error);
         const mapElement = document.getElementById('map');
         if (mapElement) {
-            mapElement.innerHTML = '<p class="no-results" style="text-align:center; padding-top: 40px;">API Яндекс.Карт не загружено.</p>';
+            mapElement.innerHTML = '<p class="no-results" style="text-align:center; padding-top: 40px;">Не удалось загрузить API Яндекс.Карт. Проверьте подключение к интернету и наличие ключа API.</p>';
         }
     }
 });

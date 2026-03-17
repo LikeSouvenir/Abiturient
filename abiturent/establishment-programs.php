@@ -14,7 +14,7 @@ $json_options = JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JS
 if ($establishment_id_filter) {
     $current_establishment_name = getEstablishmentName($conn, $establishment_id_filter);
     if ($current_establishment_name) {
-        $page_title = "Программы: " . htmlspecialchars($current_establishment_name);
+        $page_title = "" . htmlspecialchars($current_establishment_name);
         $raw_bundles_data = getProgramsByEstablishment($conn, $establishment_id_filter);
         $links_data = processProgramData($raw_bundles_data);
     } else {

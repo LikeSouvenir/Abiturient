@@ -107,3 +107,15 @@ function processEstablishmentData($raw_bundles_data, $cluster_id_filter = null, 
     return $links_data;
 }
 ?>
+<?php
+// Обработка данных программ
+function processProgramsDatas($programs) {
+    $processedPrograms = [];
+    foreach ($programs as $program) {
+        $program['image_path'] = $program['image_path'] ? "uploads/programs/" . $program['image_path'] : "uploads/programs/placeholder.svg";
+        $program['attributes_array'] = !empty($program['attributes']) ? array_map('trim', explode(',', $program['attributes'])) : [];
+        $processedPrograms[] = $program;
+    }
+    return $processedPrograms;
+}
+?>
