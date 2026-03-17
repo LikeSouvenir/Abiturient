@@ -79,4 +79,84 @@ function getEditData($conn, $table, $id, $fields = '*') {
     $stmt->close();
     return $data;
 }
+
+/**
+ * Получение телефонов заведения
+ */
+function getEstablishmentPhones($conn, $establishment_id) {
+    $phones = [];
+    $stmt = $conn->prepare("SELECT phone FROM phones WHERE establishment_id = ?");
+    $stmt->bind_param("i", $establishment_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    while($row = $result->fetch_assoc()) {
+        $phones[] = $row['phone'];
+    }
+    $stmt->close();
+    return $phones;
+}
+
+/**
+ * Получение адресов заведения
+ */
+function getEstablishmentAddresses($conn, $establishment_id) {
+    $addresses = [];
+    $stmt = $conn->prepare("SELECT address FROM addresses WHERE establishment_id = ?");
+    $stmt->bind_param("i", $establishment_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    while($row = $result->fetch_assoc()) {
+        $addresses[] = $row['address'];
+    }
+    $stmt->close();
+    return $addresses;
+}
+
+/**
+ * Сохранение телефонов заведения (упрощенная версия)
+ */
+function saveEstablishmentPhones($conn, $establishment_id, $phones) {
+    // Сначала удаляем старые телефоны
+    $stmt = $conn->prepare("DELETE FROM phones WHERE establishment_id = ?");
+    $stmt->bind_param("i", $establishment_id);
+    $stmt->execute();
+    $stmt->close();
+    
+    // Добавляем новые
+    if (!empty($phones)) {
+        $stmt = $conn->prepare("INSERT INTO phones (establishment_id, phone) VALUES (?, ?)");
+        foreach($phones as $phone) {
+            $phone = trim($phone);
+            if (!empty($phone)) {
+                $stmt->bind_param("is", $establishment_id, $phone);
+                $stmt->execute();
+            }
+        }
+        $stmt->close();
+    }
+}
+
+/**
+ * Сохранение адресов заведения (упрощенная версия)
+ */
+function saveEstablishmentAddresses($conn, $establishment_id, $addresses) {
+    // Сначала удаляем старые адреса
+    $stmt = $conn->prepare("DELETE FROM addresses WHERE establishment_id = ?");
+    $stmt->bind_param("i", $establishment_id);
+    $stmt->execute();
+    $stmt->close();
+    
+    // Добавляем новые
+    if (!empty($addresses)) {
+        $stmt = $conn->prepare("INSERT INTO addresses (establishment_id, address) VALUES (?, ?)");
+        foreach($addresses as $address) {
+            $address = trim($address);
+            if (!empty($address)) {
+                $stmt->bind_param("is", $establishment_id, $address);
+                $stmt->execute();
+            }
+        }
+        $stmt->close();
+    }
+}
 ?>

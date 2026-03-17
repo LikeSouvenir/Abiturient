@@ -33,7 +33,7 @@ $conn->close();
     <link rel="stylesheet" href="assets/css/direction-programs.css">
 </head>
 <body>
-    <?php include __DIR__ . '/templates/direction_header.php'; ?>
+    <?php include __DIR__ . '/templates/header.php'; ?>
     
     <div class="container">
         <div class="content-wrapper">

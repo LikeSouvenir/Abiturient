@@ -3,12 +3,25 @@ $edit_bundle_id = isset($_GET['edit_id']) ? intval($_GET['edit_id']) : 0;
 $bundle_to_edit = null;
 
 if ($edit_bundle_id > 0) {
-    $bundle_to_edit = getEditData($conn, 'bundles', $edit_bundle_id);
+    $stmt = $conn->prepare("SELECT * FROM bundles WHERE id = ?");
+    $stmt->bind_param("i", $edit_bundle_id);
+    $stmt->execute();
+    $bundle_to_edit = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
 }
     
 $establishments_for_select = $conn->query("SELECT id, name FROM establishments ORDER BY name")->fetch_all(MYSQLI_ASSOC);
 $programs_for_select = $conn->query("SELECT id, name FROM programs ORDER BY name")->fetch_all(MYSQLI_ASSOC);
 $clusters_for_select = $conn->query("SELECT id, name FROM clusters ORDER BY name")->fetch_all(MYSQLI_ASSOC);
+
+// Получаем адреса для выбранного заведения (для AJAX)
+if (isset($_GET['ajax']) && $_GET['ajax'] == 'get_addresses' && isset($_GET['establishment_id'])) {
+    header('Content-Type: application/json');
+    $est_id = intval($_GET['establishment_id']);
+    $addresses = getEstablishmentAddresses($conn, $est_id);
+    echo json_encode($addresses);
+    exit;
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['add_bundle'])) {
@@ -94,21 +107,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <h2>Управление Связками (Колледж-Программа)</h2>
     <div class="form-container">
         <h3><?php echo $bundle_to_edit ? 'Редактировать связку' : 'Добавить новую связку'; ?></h3>
-        <form action="index.php?tab=bundles" method="post">
+        <form action="index.php?tab=bundles" method="post" id="bundleForm">
             <?php if ($bundle_to_edit): ?>
                 <input type="hidden" name="bundle_id" value="<?php echo $bundle_to_edit['id']; ?>">
             <?php endif; ?>
+            
             <div class="form-group">
                 <label for="establishment_id_bundle">Колледж:</label>
-                <select id="establishment_id_bundle" name="establishment_id" required>
+                <select id="establishment_id_bundle" name="establishment_id" required onchange="loadAddresses(this.value)">
                     <option value="">-- Выберите колледж --</option>
                     <?php foreach ($establishments_for_select as $est): ?>
-                    <option value="<?php echo $est['id']; ?>" <?php if($bundle_to_edit && $bundle_to_edit['establishment_id'] == $est['id']) echo 'selected'; ?>>
+                    <option value="<?php echo $est['id']; ?>" 
+                        <?php if($bundle_to_edit && $bundle_to_edit['establishment_id'] == $est['id']) echo 'selected'; ?>
+                        data-addresses='<?php 
+                            $addrs = getEstablishmentAddresses($conn, $est['id']);
+                            echo htmlspecialchars(json_encode($addrs), ENT_QUOTES, 'UTF-8');
+                        ?>'>
                         <?php echo htmlspecialchars($est['name']); ?>
                     </option>
                     <?php endforeach; ?>
                 </select>
             </div>
+            
             <div class="form-group">
                 <label for="program_id_bundle">Программа:</label>
                 <select id="program_id_bundle" name="program_id" required>
@@ -120,25 +140,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <?php endforeach; ?>
                 </select>
             </div>
+            
             <div class="form-group">
                 <label for="education_type_bundle">Образование (например, За счет бюджетных средств):</label>
                 <input type="text" id="education_type_bundle" name="education_type" value="<?php echo $bundle_to_edit ? htmlspecialchars($bundle_to_edit['education_type']) : 'За счет бюджетных средств'; ?>">
             </div>
+            
             <div class="form-group">
                 <label for="education_base_bundle">На базе (например, 9 классов):</label>
                 <input type="text" id="education_base_bundle" name="education_base" value="<?php echo $bundle_to_edit ? htmlspecialchars($bundle_to_edit['education_base']) : ''; ?>">
             </div>
+            
             <div class="form-group">
                 <label for="duration_bundle">Срок обучения (например, 3 года 10 месяцев):</label>
                 <input type="text" id="duration_bundle" name="duration" value="<?php echo $bundle_to_edit ? htmlspecialchars($bundle_to_edit['duration']) : ''; ?>">
             </div>
+            
             <div class="form-group">
                 <label for="program_address_bundle">Адрес проведения программы:</label>
-                <input type="text" id="program_address_bundle" name="program_address" value="<?php echo $bundle_to_edit ? htmlspecialchars($bundle_to_edit['program_address']) : ''; ?>">
-                <div id="map-placeholder-bundle">Загрузка карты...</div>
+                <input type="text" id="program_address_bundle" name="program_address" value="<?php echo $bundle_to_edit ? htmlspecialchars($bundle_to_edit['program_address']) : ''; ?>" list="addresses-list">
+                <datalist id="addresses-list"></datalist>
+                <div id="map-placeholder-bundle" style="height: 200px; background: #f0f0f0; margin-top: 5px;"></div>
                 <input type="hidden" id="program_latitude_bundle" name="program_latitude" value="<?php echo $bundle_to_edit ? htmlspecialchars($bundle_to_edit['program_latitude']) : ''; ?>">
                 <input type="hidden" id="program_longitude_bundle" name="program_longitude" value="<?php echo $bundle_to_edit ? htmlspecialchars($bundle_to_edit['program_longitude']) : ''; ?>">
             </div>
+            
             <div class="form-group">
                 <label for="cluster_id_bundle">Профессионалитет (Кластер):</label>
                 <select id="cluster_id_bundle" name="cluster_id">
@@ -150,8 +176,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <?php endforeach; ?>
                 </select>
             </div>
-            <button type="submit" name="<?php echo $bundle_to_edit ? 'edit_bundle' : 'add_bundle'; ?>" class="btn"><?php echo $bundle_to_edit ? 'Сохранить' : 'Добавить связку'; ?></button>
-             <?php if ($bundle_to_edit): ?>
+            
+            <button type="submit" name="<?php echo $bundle_to_edit ? 'edit_bundle' : 'add_bundle'; ?>" class="btn">
+                <?php echo $bundle_to_edit ? 'Сохранить' : 'Добавить связку'; ?>
+            </button>
+            <?php if ($bundle_to_edit): ?>
                 <a href="index.php?tab=bundles" class="btn btn-danger" style="background-color:#6c757d;">Отмена</a>
             <?php endif; ?>
         </form>
@@ -159,7 +188,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     <h3>Список связок</h3>
     <table>
-        <thead><tr><th>ID</th><th>Колледж</th><th>Программа</th><th>Образование</th><th>На базе</th><th>Срок</th><th>Адрес программы</th><th>Кластер</th><th>Действия</th></tr></thead>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Колледж</th>
+                <th>Программа</th>
+                <th>Образование</th>
+                <th>На базе</th>
+                <th>Срок</th>
+                <th>Адрес программы</th>
+                <th>Кластер</th>
+                <th>Действия</th>
+            </tr>
+        </thead>
         <tbody>
         <?php
         $bundles_sql = "SELECT b.*, e.name as establishment_name, p.name as program_name, c.name as cluster_name 
@@ -171,7 +212,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $bundles_result = $conn->query($bundles_sql);
         if ($bundles_result->num_rows > 0) {
             while($row = $bundles_result->fetch_assoc()) {
-                echo "<tr><td>" . htmlspecialchars($row['id']) . "</td>";
+                echo "<tr>";
+                echo "<td>" . htmlspecialchars($row['id']) . "</td>";
                 echo "<td>" . htmlspecialchars($row['establishment_name']) . "</td>";
                 echo "<td>" . htmlspecialchars($row['program_name']) . "</td>";
                 echo "<td>" . htmlspecialchars($row['education_type']) . "</td>";
@@ -185,10 +227,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <input type='hidden' name='bundle_id' value='" . $row['id'] . "'>
                             <button type='submit' name='delete_bundle'>Удалить</button>
                         </form>
-                      </td></tr>";
+                      </td>";
+                echo "</tr>";
             }
-        } else { echo "<tr><td colspan='9'>Связок не найдено.</td></tr>"; }
+        } else { 
+            echo "<tr><td colspan='9'>Связок не найдено.</td></tr>"; 
+        }
         ?>
         </tbody>
     </table>
 </div>
+
+<script>
+function loadAddresses(establishmentId) {
+    const select = document.getElementById('establishment_id_bundle');
+    const selectedOption = select.options[select.selectedIndex];
+    const addressesList = document.getElementById('addresses-list');
+    
+    if (selectedOption && selectedOption.dataset.addresses) {
+        try {
+            const addresses = JSON.parse(selectedOption.dataset.addresses);
+            addressesList.innerHTML = '';
+            addresses.forEach(address => {
+                const option = document.createElement('option');
+                option.value = address;
+                addressesList.appendChild(option);
+            });
+        } catch (e) {
+            console.error('Error parsing addresses:', e);
+        }
+    }
+}
+
+// Загружаем адреса при загрузке страницы, если выбран колледж
+document.addEventListener('DOMContentLoaded', function() {
+    const select = document.getElementById('establishment_id_bundle');
+    if (select.value) {
+        loadAddresses(select.value);
+    }
+});
+</script>
