@@ -11,7 +11,7 @@ if ($edit_bundle_id > 0) {
 }
     
 $establishments_for_select = $conn->query("SELECT id, name FROM establishments ORDER BY name")->fetch_all(MYSQLI_ASSOC);
-$programs_for_select = $conn->query("SELECT id, name FROM programs ORDER BY name")->fetch_all(MYSQLI_ASSOC);
+$programs_for_select = $conn->query("SELECT id, name, attributes FROM programs ORDER BY name")->fetch_all(MYSQLI_ASSOC);
 $clusters_for_select = $conn->query("SELECT id, name FROM clusters ORDER BY name")->fetch_all(MYSQLI_ASSOC);
 
 // Получаем адреса для выбранного заведения (для AJAX)
@@ -29,21 +29,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $program_id = intval($_POST['program_id']);
         $education_type = trim($_POST['education_type']);
         $education_base = trim($_POST['education_base']);
-        $duration = trim($_POST['duration']);
+        $duration_years = intval($_POST['duration_years']);
+        $duration_months = intval($_POST['duration_months']);
         $program_address = trim($_POST['program_address']);
         $program_latitude = trim($_POST['program_latitude']);
         $program_longitude = trim($_POST['program_longitude']);
         $cluster_id = !empty($_POST['cluster_id']) ? intval($_POST['cluster_id']) : NULL;
+        
+        // Получаем значение чекбокса для 2 ОГЭ
+        $oge_2 = isset($_POST['oge_2']) ? 1 : 0;
+        
+        // Формируем строку длительности
+        $duration = '';
+        if ($duration_years > 0) {
+            $duration .= $duration_years . ' г. ';
+        }
+        if ($duration_months > 0) {
+            $duration .= $duration_months . ' мес.';
+        }
+        $duration = trim($duration);
 
         if ($establishment_id > 0 && $program_id > 0) {
             $stmt = $conn->prepare("INSERT INTO bundles (establishment_id, program_id, education_type, education_base, duration, program_address, program_latitude, program_longitude, cluster_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
             $stmt->bind_param("iissssssi", $establishment_id, $program_id, $education_type, $education_base, $duration, $program_address, $program_latitude, $program_longitude, $cluster_id);
             if($stmt->execute()){
-                 $_SESSION['message'] = "Связка добавлена успешно!";
-                 $_SESSION['message_type'] = "success";
+                
+                // Обновляем атрибуты программы для 2 ОГЭ
+                $attributes = $oge_2 ? '2 ОГЭ' : NULL;
+                $update_program = $conn->prepare("UPDATE programs SET attributes = ? WHERE id = ?");
+                $update_program->bind_param("si", $attributes, $program_id);
+                $update_program->execute();
+                $update_program->close();
+                
+                $_SESSION['message'] = "Связка добавлена успешно!";
+                $_SESSION['message_type'] = "success";
             } else {
-                 $_SESSION['message'] = "Ошибка добавления связки: " . $stmt->error;
-                 $_SESSION['message_type'] = "error";
+                $_SESSION['message'] = "Ошибка добавления связки: " . $stmt->error;
+                $_SESSION['message_type'] = "error";
             }
             $stmt->close();
         } else {
@@ -60,21 +82,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $program_id = intval($_POST['program_id']);
         $education_type = trim($_POST['education_type']);
         $education_base = trim($_POST['education_base']);
-        $duration = trim($_POST['duration']);
+        $duration_years = intval($_POST['duration_years']);
+        $duration_months = intval($_POST['duration_months']);
         $program_address = trim($_POST['program_address']);
         $program_latitude = trim($_POST['program_latitude']);
         $program_longitude = trim($_POST['program_longitude']);
         $cluster_id = !empty($_POST['cluster_id']) ? intval($_POST['cluster_id']) : NULL;
+        
+        // Получаем значение чекбокса для 2 ОГЭ
+        $oge_2 = isset($_POST['oge_2']) ? 1 : 0;
+        
+        // Формируем строку длительности
+        $duration = '';
+        if ($duration_years > 0) {
+            $duration .= $duration_years . ' г. ';
+        }
+        if ($duration_months > 0) {
+            $duration .= $duration_months . ' мес.';
+        }
+        $duration = trim($duration);
 
-         if ($establishment_id > 0 && $program_id > 0) {
+        if ($establishment_id > 0 && $program_id > 0) {
             $stmt = $conn->prepare("UPDATE bundles SET establishment_id=?, program_id=?, education_type=?, education_base=?, duration=?, program_address=?, program_latitude=?, program_longitude=?, cluster_id=? WHERE id=?");
             $stmt->bind_param("iissssssii", $establishment_id, $program_id, $education_type, $education_base, $duration, $program_address, $program_latitude, $program_longitude, $cluster_id, $id);
-             if($stmt->execute()){
-                 $_SESSION['message'] = "Связка обновлена успешно!";
-                 $_SESSION['message_type'] = "success";
+            if($stmt->execute()){
+                
+                // Обновляем атрибуты программы для 2 ОГЭ
+                $attributes = $oge_2 ? '2 ОГЭ' : NULL;
+                $update_program = $conn->prepare("UPDATE programs SET attributes = ? WHERE id = ?");
+                $update_program->bind_param("si", $attributes, $program_id);
+                $update_program->execute();
+                $update_program->close();
+                
+                $_SESSION['message'] = "Связка обновлена успешно!";
+                $_SESSION['message_type'] = "success";
             } else {
-                 $_SESSION['message'] = "Ошибка обновления связки: " . $stmt->error;
-                 $_SESSION['message_type'] = "error";
+                $_SESSION['message'] = "Ошибка обновления связки: " . $stmt->error;
+                $_SESSION['message_type'] = "error";
             }
             $stmt->close();
         } else {
@@ -93,13 +137,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['message'] = "Связка удалена успешно!";
             $_SESSION['message_type'] = "success";
         } else {
-             $_SESSION['message'] = "Ошибка удаления связки: " . $stmt->error;
-             $_SESSION['message_type'] = "error";
+            $_SESSION['message'] = "Ошибка удаления связки: " . $stmt->error;
+            $_SESSION['message_type'] = "error";
         }
         $stmt->close();
         header("Location: index.php?tab=bundles");
         exit;
     }
+}
+
+// Функция для разбора длительности
+function parseDuration($duration) {
+    $years = 0;
+    $months = 0;
+    
+    if (preg_match('/(\d+)\s*г/', $duration, $matches)) {
+        $years = intval($matches[1]);
+    }
+    if (preg_match('/(\d+)\s*мес/', $duration, $matches)) {
+        $months = intval($matches[1]);
+    }
+    
+    return ['years' => $years, 'months' => $months];
+}
+
+$duration_parts = ['years' => 0, 'months' => 0];
+if ($bundle_to_edit && !empty($bundle_to_edit['duration'])) {
+    $duration_parts = parseDuration($bundle_to_edit['duration']);
+}
+
+// Получаем текущее значение 2 ОГЭ для программы
+$oge_2_checked = false;
+if ($bundle_to_edit) {
+    // Получаем атрибуты программы
+    $prog_stmt = $conn->prepare("SELECT attributes FROM programs WHERE id = ?");
+    $prog_stmt->bind_param("i", $bundle_to_edit['program_id']);
+    $prog_stmt->execute();
+    $prog_result = $prog_stmt->get_result();
+    if ($prog_row = $prog_result->fetch_assoc()) {
+        $oge_2_checked = ($prog_row['attributes'] == '2 ОГЭ');
+    }
+    $prog_stmt->close();
 }
 ?>
 
@@ -134,11 +212,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <select id="program_id_bundle" name="program_id" required>
                     <option value="">-- Выберите программу --</option>
                     <?php foreach ($programs_for_select as $prog): ?>
-                    <option value="<?php echo $prog['id']; ?>" <?php if($bundle_to_edit && $bundle_to_edit['program_id'] == $prog['id']) echo 'selected'; ?>>
+                    <option value="<?php echo $prog['id']; ?>" 
+                        <?php if($bundle_to_edit && $bundle_to_edit['program_id'] == $prog['id']) echo 'selected'; ?>
+                        data-attributes="<?php echo htmlspecialchars($prog['attributes'] ?? ''); ?>">
                         <?php echo htmlspecialchars($prog['name']); ?>
                     </option>
                     <?php endforeach; ?>
                 </select>
+            </div>
+            
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="oge_2" name="oge_2" <?php echo $oge_2_checked ? 'checked' : ''; ?>>
+                    2 ОГЭ
+                </label>
+                <small style="color: #666; display: block; margin-top: 5px;">Отметьте, если для поступления нужно сдать 2 ОГЭ</small>
             </div>
             
             <div class="form-group">
@@ -147,13 +235,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
             
             <div class="form-group">
-                <label for="education_base_bundle">На базе (например, 9 классов):</label>
-                <input type="text" id="education_base_bundle" name="education_base" value="<?php echo $bundle_to_edit ? htmlspecialchars($bundle_to_edit['education_base']) : ''; ?>">
+                <label for="education_base_bundle">На базе:</label>
+                <select id="education_base_bundle" name="education_base" required>
+                    <option value="">-- Выберите базу --</option>
+                    <option value="9 классов" <?php echo ($bundle_to_edit && $bundle_to_edit['education_base'] == '9 классов') ? 'selected' : ''; ?>>9 классов</option>
+                    <option value="11 классов" <?php echo ($bundle_to_edit && $bundle_to_edit['education_base'] == '11 классов') ? 'selected' : ''; ?>>11 классов</option>
+                </select>
             </div>
             
             <div class="form-group">
-                <label for="duration_bundle">Срок обучения (например, 3 года 10 месяцев):</label>
-                <input type="text" id="duration_bundle" name="duration" value="<?php echo $bundle_to_edit ? htmlspecialchars($bundle_to_edit['duration']) : ''; ?>">
+                <label>Срок обучения:</label>
+                <div style="display: flex; gap: 20px; align-items: center;">
+                    <div style="flex: 1;">
+                        <label for="duration_years">Лет:</label>
+                        <input type="range" id="duration_years" name="duration_years" min="0" max="5" value="<?php echo $duration_parts['years']; ?>" oninput="updateDurationDisplay()">
+                        <span id="years_display"><?php echo $duration_parts['years']; ?></span>
+                    </div>
+                    <div style="flex: 1;">
+                        <label for="duration_months">Месяцев:</label>
+                        <input type="range" id="duration_months" name="duration_months" min="0" max="11" value="<?php echo $duration_parts['months']; ?>" oninput="updateDurationDisplay()">
+                        <span id="months_display"><?php echo $duration_parts['months']; ?></span>
+                    </div>
+                </div>
+                <div style="margin-top: 10px; font-weight: bold;">
+                    Итого: <span id="total_duration"><?php 
+                        echo $duration_parts['years'] > 0 ? $duration_parts['years'] . ' г. ' : '';
+                        echo $duration_parts['months'] > 0 ? $duration_parts['months'] . ' мес.' : '';
+                        if ($duration_parts['years'] == 0 && $duration_parts['months'] == 0) echo '0';
+                    ?></span>
+                </div>
             </div>
             
             <div class="form-group">
@@ -168,7 +278,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="form-group">
                 <label for="cluster_id_bundle">Профессионалитет (Кластер):</label>
                 <select id="cluster_id_bundle" name="cluster_id">
-                    <option value="">--- (Не входит в Профессионалитет) ---</option>
+                    <option value="">--- Не входит в Профессионалитет ---</option>
                     <?php foreach ($clusters_for_select as $cluster): ?>
                     <option value="<?php echo $cluster['id']; ?>" <?php if($bundle_to_edit && $bundle_to_edit['cluster_id'] == $cluster['id']) echo 'selected'; ?>>
                         <?php echo htmlspecialchars($cluster['name']); ?>
@@ -193,17 +303,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <th>ID</th>
                 <th>Колледж</th>
                 <th>Программа</th>
+                <th>2 ОГЭ</th>
                 <th>Образование</th>
                 <th>На базе</th>
                 <th>Срок</th>
                 <th>Адрес программы</th>
-                <th>Кластер</th>
+                <th>Профессионалитет</th>
                 <th>Действия</th>
             </tr>
         </thead>
         <tbody>
         <?php
-        $bundles_sql = "SELECT b.*, e.name as establishment_name, p.name as program_name, c.name as cluster_name 
+        $bundles_sql = "SELECT b.*, e.name as establishment_name, p.name as program_name, p.attributes, c.name as cluster_name 
                         FROM bundles b 
                         JOIN establishments e ON b.establishment_id = e.id 
                         JOIN programs p ON b.program_id = p.id
@@ -216,11 +327,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 echo "<td>" . htmlspecialchars($row['id']) . "</td>";
                 echo "<td>" . htmlspecialchars($row['establishment_name']) . "</td>";
                 echo "<td>" . htmlspecialchars($row['program_name']) . "</td>";
+                echo "<td>" . ($row['attributes'] == '2 ОГЭ' ? 'Да' : 'Нет') . "</td>";
                 echo "<td>" . htmlspecialchars($row['education_type']) . "</td>";
                 echo "<td>" . htmlspecialchars($row['education_base']) . "</td>";
                 echo "<td>" . htmlspecialchars($row['duration']) . "</td>";
                 echo "<td>" . htmlspecialchars($row['program_address']) . "</td>";
-                echo "<td>" . ($row['cluster_name'] ? htmlspecialchars($row['cluster_name']) : '---') . "</td>";
+                echo "<td>" . ($row['cluster_name'] ? 'Да (' . htmlspecialchars($row['cluster_name']) . ')' : 'Нет') . "</td>";
                 echo "<td class='action-links'>
                         <a href='index.php?tab=bundles&edit_id=" . $row['id'] . "'>Редакт.</a>
                         <form action='index.php?tab=bundles' method='post' onsubmit='return confirm(\"Удалить эту связку?\");'>
@@ -231,7 +343,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 echo "</tr>";
             }
         } else { 
-            echo "<tr><td colspan='9'>Связок не найдено.</td></tr>"; 
+            echo "<tr><td colspan='10'>Связок не найдено.</td></tr>"; 
         }
         ?>
         </tbody>
@@ -259,11 +371,42 @@ function loadAddresses(establishmentId) {
     }
 }
 
+function updateDurationDisplay() {
+    const years = document.getElementById('duration_years').value;
+    const months = document.getElementById('duration_months').value;
+    
+    document.getElementById('years_display').textContent = years;
+    document.getElementById('months_display').textContent = months;
+    
+    let total = '';
+    if (years > 0) total += years + ' г. ';
+    if (months > 0) total += months + ' мес.';
+    if (years == 0 && months == 0) total = '0';
+    
+    document.getElementById('total_duration').textContent = total;
+}
+
+// Функция для обновления чекбокса 2 ОГЭ при выборе программы
+document.getElementById('program_id_bundle').addEventListener('change', function() {
+    const selectedOption = this.options[this.selectedIndex];
+    const attributes = selectedOption.dataset.attributes;
+    const ogeCheckbox = document.getElementById('oge_2');
+    
+    if (attributes === '2 ОГЭ') {
+        ogeCheckbox.checked = true;
+    } else {
+        ogeCheckbox.checked = false;
+    }
+});
+
 // Загружаем адреса при загрузке страницы, если выбран колледж
 document.addEventListener('DOMContentLoaded', function() {
     const select = document.getElementById('establishment_id_bundle');
     if (select.value) {
         loadAddresses(select.value);
     }
+    
+    // Инициализируем отображение длительности
+    updateDurationDisplay();
 });
 </script>

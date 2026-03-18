@@ -5,8 +5,8 @@ $establishment_phones = [];
 $establishment_addresses = [];
 
 if ($edit_establishment_id > 0) {
-    // Получаем данные заведения
-    $stmt = $conn->prepare("SELECT id, name, website, logo_path FROM establishments WHERE id = ?");
+    // Получаем данные заведения (теперь включая координаты)
+    $stmt = $conn->prepare("SELECT id, name, website, logo_path, latitude, longitude FROM establishments WHERE id = ?");
     $stmt->bind_param("i", $edit_establishment_id);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -20,10 +20,10 @@ if ($edit_establishment_id > 0) {
             $establishment_phones[] = $phone['phone'];
         }
         
-        // Получаем адреса
-        $addresses_result = $conn->query("SELECT address FROM addresses WHERE establishment_id = $edit_establishment_id");
-        while($address = $addresses_result->fetch_assoc()) {
-            $establishment_addresses[] = $address['address'];
+        // Получаем адреса (только адреса, без координат)
+        $addr_result = $conn->query("SELECT address FROM addresses WHERE establishment_id = $edit_establishment_id");
+        while($addr = $addr_result->fetch_assoc()) {
+            $establishment_addresses[] = $addr['address'];
         }
     }
 }
@@ -34,6 +34,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         $name = trim($_POST['establishment_name']);
         $website = trim($_POST['website']);
+        
+        // Получаем координаты из полей (теперь они для establishments)
+        $latitude = isset($_POST['latitude']) && $_POST['latitude'] !== '' ? floatval($_POST['latitude']) : null;
+        $longitude = isset($_POST['longitude']) && $_POST['longitude'] !== '' ? floatval($_POST['longitude']) : null;
         
         // Сбор телефонов
         $phones = [];
@@ -46,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
         
-        // Сбор адресов
+        // Сбор адресов (только адреса, без координат)
         $addresses = [];
         if (isset($_POST['addresses']) && is_array($_POST['addresses'])) {
             foreach($_POST['addresses'] as $address) {
@@ -78,9 +82,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $logo_filename_to_save = null;
                 }
                 
-                // Обновление establishments
-                $stmt = $conn->prepare("UPDATE establishments SET name = ?, website = ?, logo_path = ? WHERE id = ?");
-                $stmt->bind_param("sssi", $name, $website, $logo_filename_to_save, $id);
+                // Обновление establishments с координатами
+                $stmt = $conn->prepare("UPDATE establishments SET name = ?, website = ?, logo_path = ?, latitude = ?, longitude = ? WHERE id = ?");
+                $stmt->bind_param("sssddi", $name, $website, $logo_filename_to_save, $latitude, $longitude, $id);
                 
                 if ($stmt->execute()) {
                     // Сохраняем телефоны
@@ -98,7 +102,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $ins_phone->close();
                     }
                     
-                    // Сохраняем адреса
+                    // Сохраняем адреса (только адреса)
                     $del_addrs = $conn->prepare("DELETE FROM addresses WHERE establishment_id = ?");
                     $del_addrs->bind_param("i", $id);
                     $del_addrs->execute();
@@ -128,8 +132,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $logo_filename = $uploaded_filename;
                 }
                 
-                $stmt = $conn->prepare("INSERT INTO establishments (name, website, logo_path) VALUES (?, ?, ?)");
-                $stmt->bind_param("sss", $name, $website, $logo_filename);
+                // Вставляем с координатами
+                $stmt = $conn->prepare("INSERT INTO establishments (name, website, logo_path, latitude, longitude) VALUES (?, ?, ?, ?, ?)");
+                $stmt->bind_param("sssdd", $name, $website, $logo_filename, $latitude, $longitude);
                 
                 if ($stmt->execute()) {
                     $new_id = $stmt->insert_id;
@@ -144,7 +149,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $ins_phone->close();
                     }
                     
-                    // Сохраняем адреса
+                    // Сохраняем адреса (только адреса)
                     if (!empty($addresses)) {
                         $ins_addr = $conn->prepare("INSERT INTO addresses (establishment_id, address) VALUES (?, ?)");
                         foreach($addresses as $address) {
@@ -234,7 +239,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <!-- Форма добавления/редактирования -->
     <div class="form-container">
         <h3><?php echo $establishment_to_edit ? 'Редактировать Учебное Заведение' : 'Добавить новое'; ?></h3>
-        <form action="index.php?tab=establishments" method="post" enctype="multipart/form-data">
+        <form action="index.php?tab=establishments" method="post" enctype="multipart/form-data" id="establishmentForm">
             <?php if ($establishment_to_edit): ?>
                 <input type="hidden" name="establishment_id" value="<?php echo $establishment_to_edit['id']; ?>">
                 <input type="hidden" name="current_logo_path" value="<?php echo htmlspecialchars($establishment_to_edit['logo_path'] ?? ''); ?>">
@@ -263,9 +268,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             <div class="form-group">
                 <label for="website_admin">Веб-сайт:</label>
-                <input type="text" id="website_admin" name="website" 
+                <input type="url" id="website_admin" name="website" 
                        value="<?php echo $establishment_to_edit ? htmlspecialchars($establishment_to_edit['website'] ?? '') : ''; ?>" 
                        placeholder="https://example.com">
+            </div>
+            
+            <!-- Координаты (теперь в establishments) -->
+            <div class="form-group">
+                <label>Координаты:</label>
+                <div style="display: flex; gap: 10px;">
+                    <div style="flex: 1;">
+                        <label for="latitude">Широта:</label>
+                        <input type="text" id="latitude" name="latitude" 
+                               value="<?php echo $establishment_to_edit && isset($establishment_to_edit['latitude']) ? htmlspecialchars($establishment_to_edit['latitude']) : ''; ?>" 
+                               placeholder="55.7558" class="address-lat">
+                    </div>
+                    <div style="flex: 1;">
+                        <label for="longitude">Долгота:</label>
+                        <input type="text" id="longitude" name="longitude" 
+                               value="<?php echo $establishment_to_edit && isset($establishment_to_edit['longitude']) ? htmlspecialchars($establishment_to_edit['longitude']) : ''; ?>" 
+                               placeholder="37.6176" class="address-lon">
+                    </div>
+                </div>
             </div>
             
             <!-- Телефоны -->
@@ -289,7 +313,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <button type="button" onclick="addPhone()" class="btn btn-primary" style="margin-top: 5px;">+ Добавить телефон</button>
             </div>
             
-            <!-- Адреса -->
+            <!-- Адреса (только адреса, без координат) -->
             <div class="form-group">
                 <label>Адреса:</label>
                 <div id="addresses-container">
@@ -308,6 +332,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <?php endif; ?>
                 </div>
                 <button type="button" onclick="addAddress()" class="btn btn-primary" style="margin-top: 5px;">+ Добавить адрес</button>
+            </div>
+            
+            <!-- Кнопка для определения координат по первому адресу -->
+            <div class="form-group">
+                <button type="button" onclick="geocodeFirstAddress()" class="btn btn-primary">Определить координаты по первому адресу</button>
             </div>
             
             <button type="submit" name="<?php echo $establishment_to_edit ? 'edit_establishment' : 'add_establishment'; ?>" class="btn">
@@ -329,13 +358,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <th>Телефоны</th>
                 <th>Адреса</th>
                 <th>Сайт</th>
+                <th>Координаты</th>
                 <th>Лого</th>
                 <th>Действия</th>
             </tr>
         </thead>
         <tbody>
             <?php
-            $est_result = $conn->query("SELECT id, name, website, logo_path FROM establishments ORDER BY name");
+            $est_result = $conn->query("SELECT id, name, website, logo_path, latitude, longitude FROM establishments ORDER BY name");
             
             if ($est_result->num_rows > 0) {
                 while($row = $est_result->fetch_assoc()) {
@@ -364,6 +394,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                     echo "</td>";
                     echo "<td>";
+                    if (!empty($row['latitude']) && !empty($row['longitude'])) {
+                        echo "Ш: " . $row['latitude'] . "<br>Д: " . $row['longitude'];
+                    } else {
+                        echo "Не указаны";
+                    }
+                    echo "</td>";
+                    echo "<td>";
                     if (!empty($row['logo_path'])) {
                         $webPath = '../uploads/establishments/' . $row['logo_path'];
                         if(file_exists('../uploads/establishments/' . $row['logo_path'])) {
@@ -377,7 +414,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     echo "</td>";
                     echo "<td class='action-links'>
                             <a href='index.php?tab=establishments&edit_id=" . $row['id'] . "'>Редакт.</a>
-                            <form action='index.php?tab=establishments' method='post' onsubmit='return confirm(\"Удалить учебное заведение? Все связанные телефоны, адреса и связки будут удалены.\");'>
+                            <form action='index.php?tab=establishments' method='post' onsubmit='return confirm(\"Удалить учебное заведение? Все связанные телефоны, адреса и связки будут удалены.\");' style='display:inline;'>
                                 <input type='hidden' name='establishment_id' value='" . $row['id'] . "'>
                                 <button type='submit' name='delete_establishment'>Удалить</button>
                             </form>
@@ -385,7 +422,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     echo "</tr>";
                 }
             } else {
-                echo "<tr><td colspan='7' style='text-align: center;'>Учебных заведений не найдено.</td></tr>";
+                echo "<tr><td colspan='8' style='text-align: center;'>Учебных заведений не найдено.</td></tr>";
             }
             ?>
         </tbody>
@@ -415,5 +452,57 @@ function addAddress() {
         <button type="button" onclick="this.parentElement.remove()" style="width: 8%;">✕</button>
     `;
     container.appendChild(div);
+}
+
+function geocodeFirstAddress() {
+    const addressInputs = document.querySelectorAll('#addresses-container input[name="addresses[]"]');
+    if (addressInputs.length === 0) {
+        alert('Добавьте хотя бы один адрес');
+        return;
+    }
+    
+    const firstAddress = addressInputs[0].value.trim();
+    if (!firstAddress) {
+        alert('Введите первый адрес');
+        return;
+    }
+    
+    const latInput = document.getElementById('latitude');
+    const lonInput = document.getElementById('longitude');
+    
+    latInput.value = '';
+    lonInput.value = '';
+    
+    // Используем Яндекс.Карты для геокодирования
+    if (typeof ymaps !== 'undefined') {
+        ymaps.geocode(firstAddress, { results: 1 }).then(function (res) {
+            const firstGeoObject = res.geoObjects.get(0);
+            if (firstGeoObject) {
+                const coords = firstGeoObject.geometry.getCoordinates();
+                latInput.value = coords[0].toFixed(6);
+                lonInput.value = coords[1].toFixed(6);
+                alert('Координаты определены: ' + latInput.value + ', ' + lonInput.value);
+            } else {
+                alert('Координаты не найдены');
+            }
+        }).catch(function(err) {
+            console.error('Geocoding error:', err);
+            alert('Ошибка определения координат');
+        });
+    } else {
+        alert('API карт не загружен');
+    }
+}
+
+// Загрузка API Яндекс.Карт если ещё не загружен
+if (typeof ymaps === 'undefined') {
+    const script = document.createElement('script');
+    script.src = 'https://api-maps.yandex.ru/2.1/?apikey=ВАШ_API_КЛЮЧ&lang=ru_RU';
+    script.onload = function() {
+        ymaps.ready(function() {
+            console.log('Яндекс.Карты загружены');
+        });
+    };
+    document.head.appendChild(script);
 }
 </script>
