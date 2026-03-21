@@ -55,12 +55,12 @@ async function read() {
       item[0] = [item[0].slice(0, idx), item[0].slice(idx + 1)]
       item = item.flat()
       item[8] = item[8].replace("'", '')
-
+      
       if (item[3].indexOf(';') === -1) {
-        addresses.push([key, item[0], item[3].trim(), 0, item[8] ])
+        addresses.push([key, item[0], item[3].trim(), 0, item[4], item[5], item[8] ])
       } else {
         item[3].split(';').forEach(element => {
-          addresses.push([++keyToAddresses, item[0], element.trim(), 0, item[8]])
+          addresses.push([++keyToAddresses, item[0], element.trim(), 0,item[4], item[5], item[8]])
         });
       }
       if (item[6].indexOf(';') !== -1) {
@@ -77,6 +77,8 @@ async function read() {
       
       item[3] = null;
       item[6] = null;
+      item[4] = null;
+      item[5] = null;
 
       ++key;
       resultData.push(item.filter(e => e !== null))
