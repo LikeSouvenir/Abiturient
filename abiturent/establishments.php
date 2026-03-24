@@ -17,7 +17,7 @@ $json_options = JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JS
 if ($program_code_filter) {
     $display_program_name = getProgramNameByCode($conn, $program_code_filter);
     if ($display_program_name) {
-        $page_title = "Колледжи по программе: " . htmlspecialchars($display_program_name);
+        $page_title = "Программа «" . htmlspecialchars($display_program_name) . "»";
     }
 } elseif ($cluster_id_filter) {
     $cluster_name = getClusterNameById($conn, $cluster_id_filter);

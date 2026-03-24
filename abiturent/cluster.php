@@ -45,7 +45,7 @@ $conn->close();
                 <p class="no-results php-message">Кластер не найден или не имеет программ.</p>
             <?php else: ?>
                 <?php foreach ($links_data as $link): ?>
-                    <?php include __DIR__ . '/templates/program_card.php'; ?>
+                    <?php include __DIR__ . '/templates/clusters_card.php'; ?>
                 <?php endforeach; ?>
             <?php endif; ?>
         </div>
