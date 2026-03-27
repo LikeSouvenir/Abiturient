@@ -32,9 +32,10 @@ $raw_bundles_data = getEstablishmentsByFilters($conn, $program_code_filter, $clu
 $links_data = processEstablishmentData($raw_bundles_data, $cluster_id_filter, $program_code_filter);
 
 $conn->close();
-?>
 
-<?php include __DIR__ . '/templates/header.php'; ?>
+$additional_css = 'assets/css/style.css';
+include __DIR__ . '/templates/header.php';
+?>
 
 <main class="container">
     <div class="left-column">
@@ -54,7 +55,10 @@ $conn->close();
 </main>
 
 <script>
-    document.getElementById('map').dataset.links = '<?= addslashes(json_encode($links_data, $json_options)) ?>';
+    const mapElement = document.getElementById('map');
+    if (mapElement) {
+        mapElement.dataset.links = '<?= addslashes(json_encode($links_data, $json_options)) ?>';
+    }
 </script>
 <script src="assets/js/map.js" defer></script>
 

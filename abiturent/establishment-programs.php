@@ -26,9 +26,10 @@ if ($establishment_id_filter) {
 }
 
 $conn->close();
-?>
 
-<?php include __DIR__ . '/templates/header.php'; ?>
+$additional_css = 'assets/css/style.css';
+include __DIR__ . '/templates/header.php';
+?>
 
 <main class="container">
     <div class="left-column">

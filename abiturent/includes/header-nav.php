@@ -11,15 +11,11 @@
             </svg>
             <input type="text" class="search-input" id="mainSearchInput" placeholder="Поиск по направлениям и программам">
         </div>
-        <button class="header-button filter-button" title="Фильтры (не реализовано)">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20px" height="20px">
-                <path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/>
-            </svg>
-        </button>
     </div>
 </header>
 
-<div class="container">
+<!-- Навигационные кнопки -->
+<div class="nav-container">
     <div class="top-buttons">
         <button id="directionsAndProgramsButton" class="active">Направления и программы</button>
         <button id="admissionWithTwoOGEButton">Поступление с 2 ОГЭ</button>
@@ -53,140 +49,7 @@
                 <p>Информация на сайте носит справочный характер. Перед подачей документов рекомендуется уточнять условия поступления в выбранном колледже.</p>
             </div>
         </div>
-        <div class="modal-footer">
-            <button id="goFurtherBtn" class="go-further-btn">Перейти далее →</button>
-        </div>
     </div>
 </div>
 
-<script>
-// JavaScript для работы навигации и модального окна
-document.addEventListener('DOMContentLoaded', function() {
-    // Проверяем, есть ли элементы на странице
-    const aboutBtn = document.getElementById('aboutSiteButton');
-    const modal = document.getElementById('aboutModal');
-    const closeBtn = document.querySelector('.close');
-    const goFurtherBtn = document.getElementById('goFurtherBtn');
-    const searchInput = document.getElementById('mainSearchInput');
-    const directionsBtn = document.getElementById('directionsAndProgramsButton');
-    const twoOgeBtn = document.getElementById('admissionWithTwoOGEButton');
-    const professionalitetBtn = document.getElementById('professionalitetButton');
-    const establishmentsButton = document.getElementById('establishmentsButton');
-    
-    // Функции для модального окна
-    function openModal() {
-        if (modal) {
-            modal.style.display = 'block';
-            document.body.style.overflow = 'hidden';
-        }
-    }
-    
-    function closeModal() {
-        if (modal) {
-            modal.style.display = 'none';
-            document.body.style.overflow = 'auto';
-        }
-    }
-    
-    // Обработчики для модального окна
-    if (aboutBtn) {
-        aboutBtn.addEventListener('click', openModal);
-    }
-    
-    if (closeBtn) {
-        closeBtn.addEventListener('click', closeModal);
-    }
-    
-    if (goFurtherBtn) {
-        goFurtherBtn.addEventListener('click', function() {
-            closeModal();
-            // Плавная прокрутка к началу страницы
-            window.scrollTo({
-                top: 0,
-                behavior: 'smooth'
-            });
-        });
-    }
-    
-    // Закрытие при клике вне модального окна
-    window.addEventListener('click', function(event) {
-        if (event.target === modal) {
-            closeModal();
-        }
-    });
-    
-    // Закрытие по клавише Escape
-    document.addEventListener('keydown', function(event) {
-        if (event.key === 'Escape' && modal && modal.style.display === 'block') {
-            closeModal();
-        }
-    });
-    
-    // Функция для очистки поиска при навигации
-    function clearSearchAndNavigate(callback) {
-        if (searchInput) {
-            searchInput.value = '';
-        }
-        if (callback && typeof callback === 'function') {
-            callback();
-        }
-    }
-    
-    // Обработчики навигации (если есть на странице)
-    if (directionsBtn && window.updateContent) {
-        directionsBtn.addEventListener('click', function() {
-            clearSearchAndNavigate(() => window.updateContent('directions'));
-        });
-    }
-    
-    if (twoOgeBtn && window.updateContent) {
-        twoOgeBtn.addEventListener('click', function() {
-            clearSearchAndNavigate(() => window.updateContent('twoOge'));
-        });
-    }
-    
-    if (professionalitetBtn && window.updateContent) {
-        professionalitetBtn.addEventListener('click', function() {
-            clearSearchAndNavigate(() => window.updateContent('professionalitet'));
-        });
-    }
-    
-    if (establishmentsButton && window.updateContent) {
-        establishmentsButton.addEventListener('click', function() {
-            clearSearchAndNavigate(() => window.updateContent('establishments'));
-        });
-    }
-    
-    // Если на странице есть поиск, добавляем обработчик
-    if (searchInput && window.handleSearch) {
-        searchInput.addEventListener('input', function(e) {
-            if (window.handleSearch) {
-                window.handleSearch(e.target.value);
-            }
-        });
-    }
-    
-    // Устанавливаем активную кнопку в зависимости от текущей страницы
-    function setActiveButtonByPage() {
-        const currentPath = window.location.pathname;
-        const buttons = {
-            directionsBtn: currentPath === '/' || currentPath === '/index.php',
-            twoOgeBtn: currentPath.includes('two-oge'),
-            professionalitetBtn: currentPath.includes('professionalitet'),
-            establishmentsBtn: currentPath.includes('establishments')
-        };
-        
-        if (buttons.directionsBtn && directionsBtn) {
-            directionsBtn.classList.add('active');
-        } else if (buttons.twoOgeBtn && twoOgeBtn) {
-            twoOgeBtn.classList.add('active');
-        } else if (buttons.professionalitetBtn && professionalitetBtn) {
-            professionalitetBtn.classList.add('active');
-        } else if (buttons.establishmentsBtn && establishmentsButton) {
-            establishmentsButton.classList.add('active');
-        }
-    }
-    
-    setActiveButtonByPage();
-});
-</script>
+<script src="assets/js/navigation.js"></script>

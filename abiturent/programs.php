@@ -23,61 +23,56 @@ if (!empty($direction_code_identifier)) {
 }
 
 $conn->close();
+
+$page_title = 'Программы: ' . $direction_name_display;
+$additional_css = 'assets/css/direction-programs.css';
+include __DIR__ . '/templates/header.php';
 ?>
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>ИС "Абитуриент" - Программы: <?php echo htmlspecialchars($direction_name_display); ?></title>
-    <link rel="stylesheet" href="assets/css/direction-programs.css">
-</head>
-<body>
-    <?php include __DIR__ . '/templates/header.php'; ?>
-    
-    <div class="container">
-        <div class="content-wrapper">
-            <h1 class="title" id="directionTitle">
-                <?php echo $direction_code_identifier . ": " . htmlspecialchars(strtoupper($direction_name_display)); ?>
-            </h1>
-            
-            <div class="program-grid" id="programGridContainer">
-                <?php if (empty($programs_list)): ?>
-                    <?php if ($direction_found): ?>
-                        <p class="no-results php-no-results-message">Программы по этому направлению не найдены или не имеют учебных заведений.</p>
-                    <?php elseif (!empty($direction_code_identifier)): ?>
-                        <p class="no-results php-no-results-message">Направление с кодом "<?php echo htmlspecialchars($direction_code_identifier); ?>" не найдено.</p>
-                    <?php else: ?>
-                        <p class="no-results php-no-results-message">Направление не указано.</p>
-                    <?php endif; ?>
+
+<main class="container">
+    <div class="content-wrapper">
+        <h1 class="title" id="directionTitle">
+            <?php echo $direction_code_identifier . ": " . htmlspecialchars(strtoupper($direction_name_display)); ?>
+        </h1>
+        
+        <div class="program-grid" id="programGridContainer">
+            <?php if (empty($programs_list)): ?>
+                <?php if ($direction_found): ?>
+                    <p class="no-results">Программы по этому направлению не найдены или не имеют учебных заведений.</p>
+                <?php elseif (!empty($direction_code_identifier)): ?>
+                    <p class="no-results">Направление с кодом "<?php echo htmlspecialchars($direction_code_identifier); ?>" не найдено.</p>
                 <?php else: ?>
-                    <?php foreach ($programs_list as $program): 
-                        $search_text = strtolower(htmlspecialchars(
-                            "{$program['name']} {$program['program_code']} {$program['keywords']} " . implode(' ', $program['attributes_array'])
-                        ));
-                    ?>
-                        <a href="establishments.php?program_code=<?php echo urlencode($program['program_code']); ?>" 
-                           class="program-card" 
-                           data-search-text="<?php echo $search_text; ?>">
-                            
-                            <img src="<?php echo htmlspecialchars($program['image_path']); ?>" 
-                                 alt="<?php echo htmlspecialchars($program['name']); ?>">
-                            
-                            <div class="program-details">
-                                <h3><?php echo htmlspecialchars($program['name']); ?></h3>
-                                <p>Код программы: <?php echo htmlspecialchars($program['program_code']); ?></p>
-                                <p>Учебных заведений: <?php echo htmlspecialchars($program['num_establishments']); ?></p>
-                                <div class="tags">
-                                    <?php echo getProgramTags($program); ?>
-                                </div>
-                            </div>
-                        </a>
-                    <?php endforeach; ?>
+                    <p class="no-results">Направление не указано.</p>
                 <?php endif; ?>
-            </div>
+            <?php else: ?>
+                <?php foreach ($programs_list as $program): 
+                    $search_text = strtolower(htmlspecialchars(
+                        "{$program['name']} {$program['program_code']} {$program['keywords']} " . implode(' ', $program['attributes_array'])
+                    ));
+                ?>
+                    <a href="establishments.php?program_code=<?php echo urlencode($program['program_code']); ?>" 
+                       class="program-card" 
+                       data-search-text="<?php echo $search_text; ?>">
+                        
+                        <img src="<?php echo htmlspecialchars($program['image_path']); ?>" 
+                             alt="<?php echo htmlspecialchars($program['name']); ?>">
+                        
+                        <div class="program-details">
+                            <h3><?php echo htmlspecialchars($program['name']); ?></h3>
+                            <p>Код программы: <?php echo htmlspecialchars($program['program_code']); ?></p>
+                            <p>Учебных заведений: <?php echo htmlspecialchars($program['num_establishments']); ?></p>
+                            <div class="tags">
+                                <?php echo getProgramTags($program); ?>
+                            </div>
+                        </div>
+                    </a>
+                <?php endforeach; ?>
+            <?php endif; ?>
         </div>
     </div>
-    
-    <script src="assets/js/direction-programs.js"></script>
+</main>
+
+<script src="assets/js/direction-programs.js"></script>
+
 </body>
 </html>
