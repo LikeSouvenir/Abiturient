@@ -1,4 +1,4 @@
-INSERT INTO establishments (id, name, logo_path, latitude, longitude, website, created_at) VALUES 
+INSERT INTO establishments (id, name, logo_path, website, created_at) VALUES 
 ('1','Техникум энергомашиностроения и металлообработки','6836f9b08deba-2.jpg','https://spbteim.ru/','2025-05-24 09:47:18'),
 ('2','Ижорский политехнический колледж','6836fd5a94332-.jpg','http://izhorskiy.college','2025-05-27 09:01:49'),
 ('4','Автомеханический колледж','6836f80378d3f-.png','https://amlspb.ru','2025-05-28 11:48:19'),

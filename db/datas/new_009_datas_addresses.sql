@@ -1,4 +1,4 @@
-INSERT INTO addresses (id, establishment_id, address, admissions_committee, created_at) VALUES 
+INSERT INTO addresses (id, establishment_id, address, admissions_committee, latitude, longitude, created_at) VALUES 
 ('1','1','Санкт-Петербург, улица Жукова, 7','0','59.964246','30.397435','2025-05-24 09:47:18'),
 ('2','2','Санкт-Петербург, Колпино, бульвар Трудящихся, 29/52','0','59.733305','30.579470','2025-05-27 09:01:49'),
 ('3','4','Санкт-Петербург, Малая Балканская улица, 41','0','59.824475','30.405143','2025-05-28 11:48:19'),
