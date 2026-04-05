@@ -54,13 +54,7 @@ include __DIR__ . '/templates/header.php';
     <?php include __DIR__ . '/templates/map_template.php'; ?>
 </main>
 
-<script>
-    const mapElement = document.getElementById('map');
-    if (mapElement) {
-        mapElement.dataset.links = '<?= addslashes(json_encode($links_data, $json_options)) ?>';
-    }
-</script>
-<script src="assets/js/map.js" defer></script>
+<script src="assets/js/map.js"></script>
 
 </body>
 </html>

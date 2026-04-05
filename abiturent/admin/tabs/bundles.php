@@ -194,13 +194,13 @@ if ($bundle_to_edit) {
                 <label for="establishment_id_bundle">Колледж:</label>
                 <select id="establishment_id_bundle" name="establishment_id" required onchange="loadAddresses(this.value)">
                     <option value="">-- Выберите колледж --</option>
-                    <?php foreach ($establishments_for_select as $est): ?>
+                    <?php foreach ($establishments_for_select as $est): 
+                        // Получаем адреса для каждого колледжа
+                        $addresses = getEstablishmentAddresses($conn, $est['id']);
+                    ?>
                     <option value="<?php echo $est['id']; ?>" 
                         <?php if($bundle_to_edit && $bundle_to_edit['establishment_id'] == $est['id']) echo 'selected'; ?>
-                        data-addresses='<?php 
-                            $addrs = getEstablishmentAddresses($conn, $est['id']);
-                            echo htmlspecialchars(json_encode($addrs), ENT_QUOTES, 'UTF-8');
-                        ?>'>
+                        data-addresses='<?php echo htmlspecialchars(json_encode($addresses), ENT_QUOTES, 'UTF-8'); ?>'>
                         <?php echo htmlspecialchars($est['name']); ?>
                     </option>
                     <?php endforeach; ?>
@@ -247,13 +247,13 @@ if ($bundle_to_edit) {
                 <label>Срок обучения:</label>
                 <div style="display: flex; gap: 20px; align-items: center;">
                     <div style="flex: 1;">
-                        <label for="duration_years">Лет:</label>
-                        <input type="range" id="duration_years" name="duration_years" min="0" max="5" value="<?php echo $duration_parts['years']; ?>" oninput="updateDurationDisplay()">
+                        <label for="duration_years">Лет (0-12):</label>
+                        <input type="range" id="duration_years" name="duration_years" min="0" max="12" step="1" value="<?php echo $duration_parts['years']; ?>" oninput="updateDurationDisplay()">
                         <span id="years_display"><?php echo $duration_parts['years']; ?></span>
                     </div>
                     <div style="flex: 1;">
-                        <label for="duration_months">Месяцев:</label>
-                        <input type="range" id="duration_months" name="duration_months" min="0" max="11" value="<?php echo $duration_parts['months']; ?>" oninput="updateDurationDisplay()">
+                        <label for="duration_months">Месяцев (0-11):</label>
+                        <input type="range" id="duration_months" name="duration_months" min="0" max="11" step="1" value="<?php echo $duration_parts['months']; ?>" oninput="updateDurationDisplay()">
                         <span id="months_display"><?php echo $duration_parts['months']; ?></span>
                     </div>
                 </div>
@@ -268,8 +268,10 @@ if ($bundle_to_edit) {
             
             <div class="form-group">
                 <label for="program_address_bundle">Адрес проведения программы:</label>
-                <input type="text" id="program_address_bundle" name="program_address" value="<?php echo $bundle_to_edit ? htmlspecialchars($bundle_to_edit['program_address']) : ''; ?>" list="addresses-list">
-                <datalist id="addresses-list"></datalist>
+                <input type="text" id="program_address_bundle" name="program_address" value="<?php echo $bundle_to_edit ? htmlspecialchars($bundle_to_edit['program_address']) : ''; ?>" list="addresses-list" autocomplete="off">
+                <datalist id="addresses-list">
+                    <!-- Список адресов будет заполняться через JavaScript -->
+                </datalist>
                 <div id="map-placeholder-bundle" style="height: 200px; background: #f0f0f0; margin-top: 5px;"></div>
                 <input type="hidden" id="program_latitude_bundle" name="program_latitude" value="<?php echo $bundle_to_edit ? htmlspecialchars($bundle_to_edit['program_latitude']) : ''; ?>">
                 <input type="hidden" id="program_longitude_bundle" name="program_longitude" value="<?php echo $bundle_to_edit ? htmlspecialchars($bundle_to_edit['program_longitude']) : ''; ?>">
@@ -339,7 +341,7 @@ if ($bundle_to_edit) {
                             <input type='hidden' name='bundle_id' value='" . $row['id'] . "'>
                             <button type='submit' name='delete_bundle'>Удалить</button>
                         </form>
-                      </td>";
+                       </td>";
                 echo "</tr>";
             }
         } else { 
@@ -351,23 +353,44 @@ if ($bundle_to_edit) {
 </div>
 
 <script>
+// Функция для загрузки адресов при выборе колледжа
 function loadAddresses(establishmentId) {
     const select = document.getElementById('establishment_id_bundle');
     const selectedOption = select.options[select.selectedIndex];
     const addressesList = document.getElementById('addresses-list');
     
+    console.log('Загрузка адресов для колледжа ID:', establishmentId);
+    
     if (selectedOption && selectedOption.dataset.addresses) {
         try {
             const addresses = JSON.parse(selectedOption.dataset.addresses);
+            console.log('Получены адреса:', addresses);
+            
+            // Очищаем и заполняем datalist
             addressesList.innerHTML = '';
-            addresses.forEach(address => {
+            
+            if (addresses && addresses.length > 0) {
+                addresses.forEach(address => {
+                    const option = document.createElement('option');
+                    option.value = address;
+                    addressesList.appendChild(option);
+                });
+                console.log(`Добавлено ${addresses.length} адресов в список`);
+            } else {
+                console.log('Нет адресов для выбранного колледжа');
+                // Добавляем пустой option, чтобы показать, что адресов нет
                 const option = document.createElement('option');
-                option.value = address;
+                option.value = '';
+                option.textContent = '--- Нет доступных адресов ---';
                 addressesList.appendChild(option);
-            });
+            }
         } catch (e) {
-            console.error('Error parsing addresses:', e);
+            console.error('Ошибка парсинга адресов:', e);
+            addressesList.innerHTML = '';
         }
+    } else {
+        console.warn('Нет данных об адресах для выбранного колледжа');
+        addressesList.innerHTML = '';
     }
 }
 
@@ -386,27 +409,55 @@ function updateDurationDisplay() {
     document.getElementById('total_duration').textContent = total;
 }
 
-// Функция для обновления чекбокса 2 ОГЭ при выборе программы
-document.getElementById('program_id_bundle').addEventListener('change', function() {
-    const selectedOption = this.options[this.selectedIndex];
-    const attributes = selectedOption.dataset.attributes;
-    const ogeCheckbox = document.getElementById('oge_2');
+// Функция для автоматической установки длительности в зависимости от выбранной базы
+function setDurationByBase() {
+    const educationBase = document.getElementById('education_base_bundle').value;
+    const yearsInput = document.getElementById('duration_years');
+    const monthsInput = document.getElementById('duration_months');
     
-    if (attributes === '2 ОГЭ') {
-        ogeCheckbox.checked = true;
-    } else {
-        ogeCheckbox.checked = false;
+    if (educationBase === '9 классов') {
+        yearsInput.value = 3;
+        monthsInput.value = 10;
+    } else if (educationBase === '11 классов') {
+        yearsInput.value = 2;
+        monthsInput.value = 10;
     }
-});
+    
+    updateDurationDisplay();
+}
+
+// Функция для обновления чекбокса 2 ОГЭ при выборе программы
+const programSelect = document.getElementById('program_id_bundle');
+if (programSelect) {
+    programSelect.addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        const attributes = selectedOption.dataset.attributes;
+        const ogeCheckbox = document.getElementById('oge_2');
+        
+        if (attributes === '2 ОГЭ') {
+            ogeCheckbox.checked = true;
+        } else {
+            ogeCheckbox.checked = false;
+        }
+    });
+}
+
+// Следим за изменением выбора базы обучения
+const educationBaseSelect = document.getElementById('education_base_bundle');
+if (educationBaseSelect) {
+    educationBaseSelect.addEventListener('change', function() {
+        setDurationByBase();
+    });
+}
 
 // Загружаем адреса при загрузке страницы, если выбран колледж
 document.addEventListener('DOMContentLoaded', function() {
     const select = document.getElementById('establishment_id_bundle');
-    if (select.value) {
+    if (select && select.value) {
         loadAddresses(select.value);
     }
     
-    // Инициализируем отображение длительности
-    updateDurationDisplay();
+    // Устанавливаем длительность по умолчанию в зависимости от выбранной базы
+    setDurationByBase();
 });
 </script>

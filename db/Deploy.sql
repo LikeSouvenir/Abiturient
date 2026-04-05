@@ -1,9 +1,9 @@
 -- =============================================
 -- MASTER DEPLOYMENT FILE
--- Database: abiturent_v3
+-- Database: abiturent_finally
 -- Created: 2026-03-09
 -- =============================================
-USE abiturent_v3;
+USE abiturent_finally;
 -- SETTINGS 
 SOURCE /home/dmitri/WebstormProjects/abiturient/Abiturient/db/000_settings.sql;
 

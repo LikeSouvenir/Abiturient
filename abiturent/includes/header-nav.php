@@ -13,7 +13,6 @@
         </div>
     </div>
 </header>
-
 <!-- Навигационные кнопки -->
 <div class="nav-container">
     <div class="top-buttons">

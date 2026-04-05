@@ -1,45 +1,40 @@
 <div class="link-item"
-     data-id="<?= $link['id'] ?>"
-     data-search-text="<?= htmlspecialchars($link['search_text'] ?? '') ?>"
-     data-lat="<?= htmlspecialchars($link['latitude'] ?? '') ?>"
-     data-lon="<?= htmlspecialchars($link['longitude'] ?? '') ?>">
-    
+    data-id="<?= $link['id'] ?>"
+    data-search-text="<?= htmlspecialchars($link['search_text'] ?? '') ?>"
+    data-map-points='<?= json_encode($link['map_points'] ?? []) ?>'
+    data-lat="<?= htmlspecialchars($link['latitude'] ?? '') ?>"
+    data-lon="<?= htmlspecialchars($link['longitude'] ?? '') ?>">
+
     <div class="college-logo">
         <img src="<?= htmlspecialchars($link['college_logo_path'] ?? '') ?>"
-             alt="Логотип <?= htmlspecialchars($link['college_name'] ?? '') ?>">
+            alt="Логотип <?= htmlspecialchars($link['college_name'] ?? '') ?>">
     </div>
-    
+
     <div class="link-details">
         <!-- Название колледжа -->
         <span class="program-name-in-card"><?= htmlspecialchars($link['program_name_in_bundle'] ?? '') ?></span>
-        
+
         <!-- Блок контактов приемной комиссии -->
         <div class="contacts-block">
-            <strong>Контакты приемной комиссии</strong>
-            
+            <strong>Приемная комиссия</strong>
+
             <?php
             $has_contacts = false;
-            
-            // Собираем адреса и телефоны в пары (если есть структура "адрес - телефон")
-            $addresses = !empty($link['program_address']) ? explode(';', $link['program_address']) : [];
-            $phones = !empty($link['phone']) ? explode("\n", $link['phone']) : [];
-            
-            // Очищаем адреса от лишних пробелов и сокращаем СПб
-            $addresses = array_map(function($addr) {
-                $addr = trim($addr);
-                $addr = str_replace(['г. Санкт-Петербург', 'Санкт-Петербург'], 'СПб', $addr);
-                return $addr;
-            }, array_filter($addresses));
-            
-            // Очищаем телефоны
-            $phones = array_map('trim', array_filter($phones));
+            $admission_addresses = $link['admission_addresses'] ?? [];
+            $admission_phones = $link['admission_phones'] ?? [];
             
             // Определяем максимальное количество элементов
-            $max_count = max(count($addresses), count($phones), 1);
+            $max_count = max(count($admission_addresses), count($admission_phones), 1);
             
             for ($i = 0; $i < $max_count; $i++):
-                $address = $addresses[$i] ?? '';
-                $phone = $phones[$i] ?? '';
+                $address_data = $admission_addresses[$i] ?? null;
+                $address = $address_data ? $address_data['address'] : '';
+                $phone = $admission_phones[$i] ?? '';
+                
+                // Обработка адреса (замена СПб)
+                if (!empty($address)) {
+                    $address = str_replace(['г. Санкт-Петербург', 'Санкт-Петербург'], 'СПб', $address);
+                }
                 
                 if (!empty($address) || !empty($phone)):
                     $has_contacts = true;
@@ -50,27 +45,39 @@
                     if (!empty($phone)):
                         $parts[] = $phone;
                     endif;
-                    ?>
+            ?>
                     <p><?= htmlspecialchars(implode(', ', $parts)) ?></p>
-                <?php 
+                <?php
                 endif;
             endfor;
             
-            // Если остались телефоны без адресов (если телефонов больше чем адресов)
-            for ($i = $max_count; $i < count($phones); $i++):
-                if (!empty($phones[$i])):
+            // Если остались телефоны без адресов
+            for ($i = $max_count; $i < count($admission_phones); $i++):
+                if (!empty($admission_phones[$i])):
                     $has_contacts = true;
-                    ?>
-                    <p><?= htmlspecialchars($phones[$i]) ?></p>
-                <?php 
+                ?>
+                    <p><?= htmlspecialchars($admission_phones[$i]) ?></p>
+            <?php
                 endif;
             endfor;
             
+            // Если остались адреса без телефонов (дополнительные)
+            for ($i = $max_count; $i < count($admission_addresses); $i++):
+                $address_data = $admission_addresses[$i];
+                if (!empty($address_data['address'])):
+                    $has_contacts = true;
+                    $address = str_replace(['г. Санкт-Петербург', 'Санкт-Петербург'], 'СПб', $address_data['address']);
+                ?>
+                    <p><?= htmlspecialchars($address) ?></p>
+            <?php
+                endif;
+            endfor;
+
             if (!$has_contacts):
                 echo '<p style="color: #999;">Контактная информация отсутствует</p>';
             endif;
             ?>
-            
+
             <!-- Сайт -->
             <?php if (!empty($link['website'])): ?>
                 <p class="college-website">
@@ -80,70 +87,78 @@
                 </p>
             <?php endif; ?>
         </div>
-        
+
+        <!-- Блок дополнительных адресов (обычные адреса) -->
+        <?php if (!empty($link['regular_addresses'])): ?>
+            <div class="contacts-block" style="margin-top: 15px;">
+                <strong>Адреса всех корпусов:</strong>
+                <?php foreach ($link['regular_addresses'] as $addr): ?>
+                    <p><?= htmlspecialchars(str_replace(['г. Санкт-Петербург', 'Санкт-Петербург'], 'СПб', $addr['address'])) ?></p>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
+
         <!-- Пустая строка (отбивка) -->
-        <?php if (!empty($link['website']) || $has_contacts): ?>
+        <?php if (!empty($link['website']) || $has_contacts || !empty($link['regular_addresses'])): ?>
             <div style="height: 1em;"></div>
         <?php endif; ?>
-        
+
         <!-- Финансирование -->
-        <?php if (!empty($link['education_type']) && strpos($link['education_type'], 'бюджет') !== false): ?>
+        <?php if (!empty($link['education_type']) && strpos(mb_strtolower($link['education_type']), 'бюджет') !== false): ?>
             <p><strong>Обучение по программе финансируется за счет бюджетных средств</strong></p>
         <?php endif; ?>
-        
+
         <!-- На базе -->
         <?php if (!empty($link['base_level'])): ?>
             <p><strong>На базе:</strong> <?= htmlspecialchars($link['base_level']) ?></p>
         <?php endif; ?>
-        
+
         <!-- Срок обучения -->
         <?php if (!empty($link['duration'])): ?>
             <p><strong>Срок обучения:</strong> <?= htmlspecialchars($link['duration']) ?></p>
         <?php endif; ?>
-        
-        <!-- Адреса проведения программы (оставляем как отдельный блок) -->
+
+        <!-- Адреса проведения программы -->
         <?php if (!empty($link['program_address'])): ?>
             <p>
-                <strong>Обучение по адресу:</strong> 
-                <?php 
-                $addresses = explode(';', $link['program_address']);
-                $processed_addresses = array_map(function($addr) {
-                    $addr = trim($addr);
-                    $addr = str_replace(['г. Санкт-Петербург', 'Санкт-Петербург'], 'СПб', $addr);
-                    return $addr;
-                }, array_filter($addresses));
-                echo htmlspecialchars(implode('; ', $processed_addresses));
-                ?>
+                <strong>Обучение по адресу:</strong>
+                <?= htmlspecialchars($link['program_address']) ?>
             </p>
         <?php endif; ?>
-        
+
         <!-- Теги (лейблы) -->
         <div class="tags-container">
             <?php if (!empty($link['education_type'])): ?>
                 <?php
-                $tag_class = 'attribute-tag';
-                if (strpos(mb_strtolower($link['education_type']), 'профессия') !== false) {
-                    $tag_class .= ' profession-tag';
-                } elseif (strpos(mb_strtolower($link['education_type']), 'специальность') !== false) {
-                    $tag_class .= ' specialty-tag';
-                }
+                $education_type_lower = mb_strtolower($link['education_type']);
+                if (strpos($education_type_lower, 'бюджет') === false):
+                    $tag_class = 'attribute-tag';
+                    if (strpos($education_type_lower, 'профессия') !== false) {
+                        $tag_class .= ' profession-tag';
+                    } elseif (strpos($education_type_lower, 'специальность') !== false) {
+                        $tag_class .= ' specialty-tag';
+                    }
                 ?>
-                <span class="<?= $tag_class ?>"><?= htmlspecialchars($link['education_type']) ?></span>
+                    <span class="<?= $tag_class ?>"><?= htmlspecialchars($link['education_type']) ?></span>
+                <?php endif; ?>
             <?php endif; ?>
-            
+
             <?php if (!empty($link['program_attributes_array'])): ?>
                 <?php foreach ($link['program_attributes_array'] as $attr): ?>
                     <?php
-                        $attr_lower = mb_strtolower(trim($attr));
-                        $tag_class = 'attribute-tag';
-                        if (strpos($attr_lower, '2 огэ') !== false) {
-                            $tag_class .= ' oge-attribute';
-                        }
+                    $attr_lower = mb_strtolower(trim($attr));
+                    if (strpos($attr_lower, 'бюджет') !== false) {
+                        continue;
+                    }
+                    $tag_class = 'attribute-tag';
+                    if (strpos($attr_lower, '2 огэ') !== false) {
+                        $tag_class .= ' oge-attribute';
+                    }
                     ?>
                     <span class="<?= $tag_class ?>"><?= htmlspecialchars($attr) ?></span>
                 <?php endforeach; ?>
             <?php endif; ?>
-            
+
             <?php if (!empty($link['is_professionalitet']) || !empty($link['cluster_name'])): ?>
                 <span class="attribute-tag professionalitet-tag">
                     Профессионалитет<?= !empty($link['cluster_name']) ? ': ' . htmlspecialchars($link['cluster_name']) : '' ?>

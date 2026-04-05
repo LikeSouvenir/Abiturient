@@ -11,5 +11,5 @@ CREATE TABLE `bundles` (
   `program_longitude` text DEFAULT NULL,
   `cluster_id` int(11) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `program_swith_2_oge` BOOL DEFAULT FALSE
+  `program_with_2_oge` BOOL DEFAULT FALSE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

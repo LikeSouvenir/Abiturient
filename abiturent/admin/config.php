@@ -5,7 +5,7 @@ ini_set('display_errors', 1);
 define('DB_SERVER', 'localhost');
 define('DB_USERNAME', 'root'); 
 define('DB_PASSWORD', 'ваш_пароль'); 
-define('DB_NAME', 'abiturent_v3');
+define('DB_NAME', 'abiturent_finally');
 
 $conn = new mysqli(DB_SERVER, DB_USERNAME, DB_PASSWORD);
 

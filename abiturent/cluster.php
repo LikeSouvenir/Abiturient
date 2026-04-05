@@ -16,7 +16,7 @@ if ($cluster_id) {
     $current_cluster_name = getClusterName($conn, $cluster_id);
     
     if ($current_cluster_name) {
-        $page_title = "\"" . htmlspecialchars($current_cluster_name) . "\"";
+        $page_title = "«" . htmlspecialchars($current_cluster_name) . "»";
         // Получаем программы по cluster_id
         $raw_bundles_data = getProgramsByCluster($conn, $cluster_id);
         $links_data = processProgramData($raw_bundles_data);
@@ -61,7 +61,7 @@ include __DIR__ . '/templates/header.php';
         mapElement.dataset.links = '<?= addslashes(json_encode($links_data, $json_options)) ?>';
     }
 </script>
-<script src="assets/js/map.js" defer></script>
+<script src="assets/js/map.js"></script>
 
 </body>
 </html>
