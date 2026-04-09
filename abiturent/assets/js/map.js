@@ -6,18 +6,18 @@ let mapInitialized = false;
 function loadYandexMapsAPI() {
     return new Promise((resolve, reject) => {
         if (window.ymaps && window.ymaps.Map) {
-            console.log('API Яндекс.Карт уже загружено');
+            console.log('✅ API Яндекс.Карт уже загружено');
             resolve();
             return;
         }
 
         const existingScript = document.querySelector('script[src*="api-maps.yandex.ru"]');
         if (existingScript) {
-            console.log('Скрипт API уже загружается, ожидаем...');
+            console.log('⏳ Скрипт API уже загружается, ожидаем...');
             const checkInterval = setInterval(() => {
                 if (window.ymaps && window.ymaps.Map) {
                     clearInterval(checkInterval);
-                    console.log('API Яндекс.Карт загружено (ожидание)');
+                    console.log('✅ API Яндекс.Карт загружено (ожидание)');
                     resolve();
                 }
             }, 100);
@@ -30,18 +30,19 @@ function loadYandexMapsAPI() {
             return;
         }
 
-        console.log('Загружаем API Яндекс.Карт...');
+        console.log('📥 Загружаем API Яндекс.Карт...');
         const script = document.createElement('script');
-        // ВСТАВЬТЕ ВАШ РЕАЛЬНЫЙ API КЛЮЧ!
-        script.src = 'https://api-maps.yandex.ru/2.1/?apikey=ВАШ_РЕАЛЬНЫЙ_КЛЮЧ_API&lang=ru_RU';
+        // 🔑 ВАЖНО: Замените на ваш реальный API ключ!
+        const API_KEY = 'ВАШ_РЕАЛЬНЫЙ_API_КЛЮЧ_ОТ_ЯНДЕКС_КАРТ';
+        script.src = `https://api-maps.yandex.ru/2.1/?apikey=${API_KEY}&lang=ru_RU`;
         script.type = 'text/javascript';
         
         script.onload = () => {
-            console.log('Скрипт API загружен, ожидаем ymaps...');
+            console.log('✅ Скрипт API загружен, ожидаем ymaps...');
             const checkYmaps = setInterval(() => {
                 if (window.ymaps && window.ymaps.Map) {
                     clearInterval(checkYmaps);
-                    console.log('ymaps готов к использованию');
+                    console.log('✅ ymaps готов к использованию');
                     resolve();
                 }
             }, 50);
@@ -58,35 +59,104 @@ function loadYandexMapsAPI() {
     });
 }
 
-// Функция для извлечения данных из разных источников
+// Функция для извлечения данных с ожиданием
 function getMapData() {
-    // 1. Проверяем window.mapData (из map_template.php)
+    // 1. Проверяем window.mapData
     if (window.mapData && Array.isArray(window.mapData) && window.mapData.length > 0) {
-        console.log('Данные получены из window.mapData');
+        console.log('✅ Данные получены из window.mapData, количество:', window.mapData.length);
+        console.log('📋 Пример данных:', window.mapData[0]);
         return window.mapData;
     }
     
-    // 2. Проверяем dataset.links (из establishments.php)
+    // 2. Проверяем dataset.links
     const mapElement = document.getElementById('map');
     if (mapElement && mapElement.dataset.links) {
         try {
             const data = JSON.parse(mapElement.dataset.links);
             if (data && Array.isArray(data) && data.length > 0) {
-                console.log('Данные получены из dataset.links');
+                console.log('✅ Данные получены из dataset.links, количество:', data.length);
                 return data;
             }
         } catch(e) {
-            console.error('Ошибка парсинга dataset.links:', e);
+            console.error('❌ Ошибка парсинга dataset.links:', e);
         }
     }
     
-    // 3. Проверяем глобальную переменную linksData (на всякий случай)
+    // 3. Проверяем глобальную переменную linksDataForMap
     if (window.linksDataForMap && Array.isArray(window.linksDataForMap) && window.linksDataForMap.length > 0) {
-        console.log('Данные получены из linksDataForMap');
+        console.log('✅ Данные получены из linksDataForMap, количество:', window.linksDataForMap.length);
         return window.linksDataForMap;
     }
     
+    // 4. Пробуем найти данные в переменной mapData (без window)
+    if (typeof mapData !== 'undefined' && Array.isArray(mapData) && mapData.length > 0) {
+        console.log('✅ Данные получены из mapData (глобальная), количество:', mapData.length);
+        window.mapData = mapData; // Сохраняем в window для будущего использования
+        return mapData;
+    }
+    
+    console.warn('⚠️ Данные для карты не найдены ни в одном источнике');
+    console.log('Доступные глобальные переменные:', Object.keys(window).filter(k => k.includes('map') || k.includes('data')));
     return null;
+}
+
+// Модифицируем инициализацию - ждём появления данных
+document.addEventListener('DOMContentLoaded', async () => {
+    console.log('🚀 DOM загружен, начинаем инициализацию...');
+    
+    // ... остальной код инициализации ...
+    
+    // Ждём появления данных (максимум 2 секунды)
+    let mapData = null;
+    let attempts = 0;
+    const maxAttempts = 20;
+    
+    while (!mapData && attempts < maxAttempts) {
+        mapData = getMapData();
+        if (!mapData) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+            attempts++;
+        }
+    }
+    
+    if (!mapData || mapData.length === 0) {
+        console.log('📭 Данные для карты не найдены после ожидания');
+        const mapElement = document.getElementById('map');
+        if (mapElement) {
+            mapElement.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;">📭 Нет данных для отображения на карте</div>';
+        }
+        return;
+    }
+    
+    // ... остальной код загрузки карты ...
+});
+
+// 🔧 ИСПРАВЛЕННАЯ ФУНКЦИЯ: Корректно преобразует строки в числа
+function normalizeCoordinate(coord) {
+    // Если координата null или undefined
+    if (coord === null || coord === undefined || coord === '') {
+        return NaN;
+    }
+    
+    // Если это строка - очищаем и преобразуем
+    if (typeof coord === 'string') {
+        // Удаляем пробелы в начале и конце
+        coord = coord.trim();
+        // Заменяем запятую на точку (на случай если пришло "59,93428")
+        coord = coord.replace(',', '.');
+        // Удаляем все символы кроме цифр, точки и минуса
+        coord = coord.replace(/[^\d.-]/g, '');
+    }
+    
+    // Пробуем преобразовать в число
+    const parsed = parseFloat(coord);
+    
+    // Проверяем, что получилось число и оно не NaN
+    if (!isNaN(parsed) && isFinite(parsed) && parsed !== 0) {
+        return parsed;
+    }
+    
+    return NaN;
 }
 
 // Функция для проверки наличия координат в данных
@@ -97,14 +167,20 @@ function hasCoordinatesInData(data) {
         // Проверяем map_points
         if (item.map_points && Array.isArray(item.map_points)) {
             for (const point of item.map_points) {
-                if (point.latitude && point.longitude && point.latitude !== null && point.longitude !== null) {
+                const lat = normalizeCoordinate(point.latitude);
+                const lon = normalizeCoordinate(point.longitude);
+                if (!isNaN(lat) && !isNaN(lon)) {
                     return true;
                 }
             }
         }
         // Проверяем прямые координаты
-        else if (item.latitude && item.longitude && item.latitude !== null && item.longitude !== null) {
-            return true;
+        else if (item.latitude && item.longitude) {
+            const lat = normalizeCoordinate(item.latitude);
+            const lon = normalizeCoordinate(item.longitude);
+            if (!isNaN(lat) && !isNaN(lon)) {
+                return true;
+            }
         }
     }
     return false;
@@ -112,15 +188,15 @@ function hasCoordinatesInData(data) {
 
 // Функция для отображения всех меток на карте
 function initMap() {
-    console.log('initMap вызван, mapInitialized =', mapInitialized);
+    console.log('🗺️ initMap вызван, mapInitialized =', mapInitialized);
     
     if (mapInitialized) {
-        console.log('Карта уже инициализирована');
+        console.log('⚠️ Карта уже инициализирована');
         return;
     }
     
     if (typeof ymaps === 'undefined' || !ymaps.Map) {
-        console.error('Яндекс.Карты не загружены');
+        console.error('❌ Яндекс.Карты не загружены');
         return;
     }
     
@@ -128,7 +204,7 @@ function initMap() {
     const linksData = getMapData();
     
     if (!linksData || linksData.length === 0) {
-        console.error('Нет данных для карты');
+        console.error('❌ Нет данных для карты');
         const mapDiv = document.getElementById('map');
         if (mapDiv) {
             mapDiv.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;">📭 Нет данных для отображения на карте</div>';
@@ -136,89 +212,111 @@ function initMap() {
         return;
     }
     
-    console.log('Получено данных:', linksData.length, 'записей');
-    console.log('Пример первой записи:', linksData[0]);
+    console.log('📊 Получено данных:', linksData.length, 'записей');
     
     // Проверяем существование элемента map
     const mapElement = document.getElementById('map');
     if (!mapElement) {
-        console.error('Элемент #map не найден');
+        console.error('❌ Элемент #map не найден');
         return;
     }
     
     // Собираем уникальные точки
     let uniquePoints = new Map();
+    let totalPointsChecked = 0;
+    let validPointsFound = 0;
+    let invalidPointsCount = 0;
     
     linksData.forEach((item, idx) => {
-        console.log(`Обработка элемента ${idx}:`, item.college_name || item.name || 'Без названия');
+        console.log(`\n🔍 Обработка элемента ${idx}:`);
+        console.log(`  Название: ${item.college_name || item.name || 'Без названия'}`);
+        console.log(`  latitude (сырое): "${item.latitude}" (тип: ${typeof item.latitude})`);
+        console.log(`  longitude (сырое): "${item.longitude}" (тип: ${typeof item.longitude})`);
         
         // Проверяем наличие map_points
         if (item.map_points && Array.isArray(item.map_points) && item.map_points.length > 0) {
-            item.map_points.forEach(point => {
-                if (point.latitude && point.longitude) {
-                    const lat = parseFloat(point.latitude);
-                    const lon = parseFloat(point.longitude);
-                    const address = point.address;
+            console.log(`  📍 Найдено map_points: ${item.map_points.length}`);
+            
+            item.map_points.forEach((point, pointIdx) => {
+                totalPointsChecked++;
+                
+                const lat = normalizeCoordinate(point.latitude);
+                const lon = normalizeCoordinate(point.longitude);
+                const address = point.address || 'Адрес не указан';
+                
+                console.log(`    Точка ${pointIdx}: lat="${point.latitude}" → ${lat}, lon="${point.longitude}" → ${lon}`);
+                
+                if (!isNaN(lat) && !isNaN(lon)) {
+                    const key = `${lat.toFixed(6)},${lon.toFixed(6)}`;
                     
-                    console.log(`  Точка из map_points: ${lat}, ${lon} - ${address}`);
-                    
-                    if (!isNaN(lat) && !isNaN(lon) && lat !== 0 && lon !== 0) {
-                        const key = `${lat},${lon}`;
-                        
-                        if (!uniquePoints.has(key)) {
-                            uniquePoints.set(key, {
-                                id: item.id || item.program_id || idx,
-                                name: item.college_name || item.name,
-                                program: item.program_name_in_bundle,
-                                address: address,
-                                latitude: lat,
-                                longitude: lon,
-                                type: point.type || 'regular'
-                            });
-                            console.log(`    ✅ Добавлена уникальная точка`);
-                        } else {
-                            console.log(`    ⏭️ Точка уже существует`);
-                        }
+                    if (!uniquePoints.has(key)) {
+                        validPointsFound++;
+                        uniquePoints.set(key, {
+                            id: item.id || item.program_id || idx,
+                            name: item.college_name || item.name || 'Без названия',
+                            program: item.program_name_in_bundle || '',
+                            address: address,
+                            latitude: lat,
+                            longitude: lon,
+                            type: point.type || 'regular'
+                        });
+                        console.log(`      ✅ Точка добавлена: ${address}`);
+                    } else {
+                        console.log(`      ⏭️ Точка уже существует`);
                     }
+                } else {
+                    invalidPointsCount++;
+                    console.warn(`      ❌ Некорректные координаты после преобразования`);
                 }
             });
         } 
         // Проверяем наличие координат напрямую в объекте
-        else if (item.latitude && item.longitude && item.latitude !== null && item.longitude !== null) {
-            const lat = parseFloat(item.latitude);
-            const lon = parseFloat(item.longitude);
-            const address = item.map_address || item.program_address || item.address;
+        else {
+            totalPointsChecked++;
             
-            console.log(`  Точка напрямую: ${lat}, ${lon} - ${address}`);
+            const lat = normalizeCoordinate(item.latitude);
+            const lon = normalizeCoordinate(item.longitude);
+            const address = item.map_address || item.program_address || item.address || 'Адрес не указан';
             
-            if (!isNaN(lat) && !isNaN(lon) && lat !== 0 && lon !== 0) {
-                const key = `${lat},${lon}`;
+            console.log(`  📍 Преобразованные координаты: lat=${lat}, lon=${lon}`);
+            
+            if (!isNaN(lat) && !isNaN(lon)) {
+                const key = `${lat.toFixed(6)},${lon.toFixed(6)}`;
                 
                 if (!uniquePoints.has(key)) {
+                    validPointsFound++;
                     uniquePoints.set(key, {
                         id: item.id || item.program_id || idx,
-                        name: item.college_name || item.name,
-                        program: item.program_name_in_bundle,
+                        name: item.college_name || item.name || 'Без названия',
+                        program: item.program_name_in_bundle || '',
                         address: address,
                         latitude: lat,
                         longitude: lon,
                         type: 'regular'
                     });
-                    console.log(`    ✅ Добавлена уникальная точка`);
+                    console.log(`    ✅ Точка добавлена: ${address}`);
+                } else {
+                    console.log(`    ⏭️ Точка уже существует`);
                 }
+            } else {
+                invalidPointsCount++;
+                console.warn(`    ❌ Некорректные координаты: lat="${item.latitude}", lon="${item.longitude}"`);
             }
-        } else {
-            console.log(`  ⚠️ Нет координат для элемента ${idx}`);
         }
     });
     
     const allPoints = Array.from(uniquePoints.values());
-    console.log(`Всего уникальных точек: ${allPoints.length}`);
+    
+    console.log('\n📈 ИТОГОВАЯ СТАТИСТИКА:');
+    console.log(`  Всего проверено элементов: ${totalPointsChecked}`);
+    console.log(`  Валидных точек: ${validPointsFound}`);
+    console.log(`  Уникальных точек: ${allPoints.length}`);
+    console.log(`  Некорректных точек: ${invalidPointsCount}`);
     
     if (allPoints.length === 0) {
-        console.log('Нет точек с координатами');
+        console.log('❌ Нет точек с валидными координатами');
         if (mapElement) {
-            mapElement.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;">📍 Нет адресов с координатами для отображения</div>';
+            mapElement.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;">📍 Нет адресов с корректными координатами для отображения</div>';
         }
         return;
     }
@@ -226,40 +324,84 @@ function initMap() {
     // Инициализируем карту
     mapInitialized = true;
     
-    // Функция для создания и добавления меток
-    const createPlacemarks = () => {
-        console.log('Начинаем добавление меток...');
+    try {
+        // Вычисляем центр карты
+        let centerLat = 59.93428; // Центр СПб по умолчанию
+        let centerLon = 30.3351;
         
-        // Цвета меток
-        const getPreset = (type) => {
-            switch(type) {
-                case 'admission':
-                    return 'islands#redEducationIcon';
-                case 'regular':
-                    return 'islands#blueEducationIcon';
-                case 'program':
-                    return 'islands#greenEducationIcon';
-                default:
-                    return 'islands#blueEducationIcon';
-            }
-        };
+        if (allPoints.length > 0) {
+            // Находим среднее значение координат
+            const sumLat = allPoints.reduce((sum, p) => sum + p.latitude, 0);
+            const sumLon = allPoints.reduce((sum, p) => sum + p.longitude, 0);
+            centerLat = sumLat / allPoints.length;
+            centerLon = sumLon / allPoints.length;
+        }
         
-        const getTypeName = (type) => {
-            switch(type) {
-                case 'admission':
-                    return 'Приемная комиссия';
-                case 'regular':
-                    return 'Основной адрес';
-                case 'program':
-                    return 'Адрес программы';
-                default:
-                    return 'Адрес';
-            }
-        };
+        // Создаем карту
+        yandexMapInstance = new ymaps.Map('map', {
+            center: [centerLat, centerLon],
+            zoom: 11,
+            controls: ['zoomControl', 'fullscreenControl']
+        });
         
-        // Создаем метки
-        allPoints.forEach((point, index) => {
-            console.log(`Создаем метку ${index + 1} для: ${point.address}`);
+        console.log('✅ Карта создана');
+        
+        // Добавляем метки
+        addPlacemarksToMap(allPoints);
+        
+    } catch(e) {
+        console.error('❌ Ошибка при создании карты:', e);
+        mapInitialized = false;
+        const mapDiv = document.getElementById('map');
+        if (mapDiv) {
+            mapDiv.innerHTML = '<div style="padding: 20px; text-align: center; color: red;">❌ Ошибка создания карты: ' + e.message + '</div>';
+        }
+    }
+}
+
+// Функция для добавления меток на карту
+function addPlacemarksToMap(points) {
+    if (!yandexMapInstance) {
+        console.error('❌ Карта не инициализирована');
+        return;
+    }
+    
+    console.log(`🗺️ Добавляем ${points.length} меток на карту...`);
+    
+    // Очищаем существующие метки
+    yandexMapInstance.geoObjects.removeAll();
+    
+    // Цвета меток
+    const getPreset = (type) => {
+        switch(type) {
+            case 'admission':
+                return 'islands#redEducationIcon';
+            case 'regular':
+                return 'islands#blueEducationIcon';
+            case 'program':
+                return 'islands#greenEducationIcon';
+            default:
+                return 'islands#blueEducationIcon';
+        }
+    };
+    
+    const getTypeName = (type) => {
+        switch(type) {
+            case 'admission':
+                return 'Приемная комиссия';
+            case 'regular':
+                return 'Основной адрес';
+            case 'program':
+                return 'Адрес программы';
+            default:
+                return 'Адрес';
+        }
+    };
+    
+    // Создаем метки
+    points.forEach((point, index) => {
+        try {
+            console.log(`  📍 Метка ${index + 1}/${points.length}: ${point.address} (${point.latitude}, ${point.longitude})`);
             
             const placemark = new ymaps.Placemark(
                 [point.latitude, point.longitude],
@@ -287,51 +429,30 @@ function initMap() {
             
             // Добавляем метку на карту
             yandexMapInstance.geoObjects.add(placemark);
-        });
-        
-        console.log(`✅ Добавлено ${allPoints.length} меток на карту`);
-        
-        // Устанавливаем границы карты
-        if (allPoints.length > 1) {
-            try {
-                const bounds = yandexMapInstance.geoObjects.getBounds();
-                if (bounds) {
-                    yandexMapInstance.setBounds(bounds, {
-                        checkZoomRange: true,
-                        zoomMargin: 50
-                    });
-                }
-            } catch(e) {
-                console.warn('Ошибка установки границ:', e);
-            }
-        } else if (allPoints.length === 1) {
-            // Если одна метка, просто центрируем на ней
-            yandexMapInstance.setCenter([allPoints[0].latitude, allPoints[0].longitude], 15);
+            
+        } catch(e) {
+            console.error(`    ❌ Ошибка:`, e);
         }
-    };
+    });
     
-    try {
-        // Создаем карту
-        yandexMapInstance = new ymaps.Map('map', {
-            center: [allPoints[0].latitude, allPoints[0].longitude],
-            zoom: 14,
-            controls: ['zoomControl', 'fullscreenControl']
-        });
-        
-        console.log('Карта создана, ожидаем готовности...');
-        
-        // Добавляем метки после небольшой задержки
-        setTimeout(() => {
-            createPlacemarks();
-        }, 200);
-        
-    } catch(e) {
-        console.error('Ошибка при создании карты:', e);
-        mapInitialized = false;
-        const mapDiv = document.getElementById('map');
-        if (mapDiv) {
-            mapDiv.innerHTML = '<div style="padding: 20px; text-align: center; color: red;">❌ Ошибка создания карты: ' + e.message + '</div>';
+    console.log(`✅ Добавлено меток: ${yandexMapInstance.geoObjects.getLength()}`);
+    
+    // Устанавливаем границы карты
+    if (points.length > 1) {
+        try {
+            const bounds = yandexMapInstance.geoObjects.getBounds();
+            if (bounds && bounds[0] && bounds[1]) {
+                yandexMapInstance.setBounds(bounds, {
+                    checkZoomRange: true,
+                    zoomMargin: 50
+                });
+            }
+        } catch(e) {
+            console.warn('⚠️ Ошибка установки границ:', e);
+            yandexMapInstance.setCenter([points[0].latitude, points[0].longitude], 12);
         }
+    } else if (points.length === 1) {
+        yandexMapInstance.setCenter([points[0].latitude, points[0].longitude], 15);
     }
 }
 
@@ -345,16 +466,16 @@ function escapeHtml(text) {
 
 // Функция прокрутки к карточке
 function scrollToCard(cardId) {
-    console.log('Прокрутка к карточке:', cardId);
+    console.log('🔍 Прокрутка к карточке:', cardId);
     const card = document.querySelector(`.link-item[data-id="${cardId}"]`);
     if (card) {
-        card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
         card.classList.add('highlight-card');
         setTimeout(() => {
             card.classList.remove('highlight-card');
         }, 2000);
     } else {
-        console.warn('Карточка не найдена:', cardId);
+        console.warn('⚠️ Карточка не найдена:', cardId);
     }
 }
 
@@ -371,9 +492,12 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
+// Делаем функцию scrollToCard глобальной
+window.scrollToCard = scrollToCard;
+
 // Инициализация после загрузки DOM
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log('DOM загружен, начинаем инициализацию карты...');
+    console.log('🚀 DOM загружен, начинаем инициализацию...');
     
     // Инициализация поиска
     const searchInput = document.getElementById('linkSearchInput');
@@ -406,7 +530,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Проверяем данные для карты
     const mapElement = document.getElementById('map');
     if (!mapElement) {
-        console.error('Элемент #map не найден');
+        console.error('❌ Элемент #map не найден');
         return;
     }
     
@@ -414,25 +538,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     const mapData = getMapData();
     
     if (!mapData || mapData.length === 0) {
-        console.log('Нет данных для отображения на карте');
+        console.log('📭 Нет данных для отображения на карте');
         mapElement.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;">📭 Нет данных для отображения на карте</div>';
         return;
     }
     
     // Проверяем наличие координат
     if (!hasCoordinatesInData(mapData)) {
-        console.log('Нет координат для отображения на карте');
-        mapElement.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;">📍 Нет координат для отображения на карте</div>';
+        console.log('📍 Нет корректных координат для отображения на карте');
+        mapElement.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;">📍 Нет корректных координат для отображения на карте</div>';
         return;
     }
     
     // Загружаем API и инициализируем карту
     try {
         await loadYandexMapsAPI();
-        console.log('API загружено, вызываем ymaps.ready');
+        console.log('✅ API загружено, вызываем ymaps.ready');
         ymaps.ready(initMap);
     } catch (error) {
-        console.error("Failed to load Yandex Maps API:", error);
+        console.error("❌ Failed to load Yandex Maps API:", error);
         if (mapElement) {
             mapElement.innerHTML = '<div style="padding: 20px; text-align: center; color: red;">❌ Не удалось загрузить API Яндекс.Карт. Проверьте API ключ и подключение к интернету.</div>';
         }

@@ -61,6 +61,47 @@ include __DIR__ . '/templates/header.php';
         mapElement.dataset.links = '<?= addslashes(json_encode($links_data, $json_options)) ?>';
     }
 </script>
+<!-- 🔧 СНАЧАЛА ОПРЕДЕЛЯЕМ ДАННЫЕ ДЛЯ КАРТЫ -->
+<script>
+// Определяем window.mapData ДО загрузки map.js
+window.mapData = <?= json_encode($links_data, $json_options) ?>;
+
+console.log('📊 window.mapData установлен, количество записей:', window.mapData.length);
+console.log('📋 Пример первой записи:', window.mapData[0]);
+
+// Проверяем координаты
+let hasValidCoordinates = false;
+if (window.mapData && window.mapData.length > 0) {
+    window.mapData.forEach((item, index) => {
+        if (index === 0) {
+            console.log(`\n📍 Пример элемента 0:`, item);
+        }
+        
+        // Проверяем map_points
+        if (item.map_points && Array.isArray(item.map_points)) {
+            item.map_points.forEach(point => {
+                if (point.latitude && point.longitude && 
+                    point.latitude !== null && point.longitude !== null) {
+                    hasValidCoordinates = true;
+                }
+            });
+        }
+    });
+}
+
+console.log(`📈 Есть валидные координаты: ${hasValidCoordinates}`);
+
+// Устанавливаем dataset для обратной совместимости
+document.addEventListener('DOMContentLoaded', function() {
+    const mapElement = document.getElementById('map');
+    if (mapElement) {
+        mapElement.dataset.links = JSON.stringify(window.mapData);
+        console.log('✅ dataset.links установлен');
+    }
+});
+</script>
+
+<!-- 🔧 ЗАГРУЖАЕМ map.js ПОСЛЕ определения данных -->
 <script src="assets/js/map.js"></script>
 
 </body>

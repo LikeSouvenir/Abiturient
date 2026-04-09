@@ -88,18 +88,8 @@
             <?php endif; ?>
         </div>
 
-        <!-- Блок дополнительных адресов (обычные адреса) -->
-        <?php if (!empty($link['regular_addresses'])): ?>
-            <div class="contacts-block" style="margin-top: 15px;">
-                <strong>Адреса всех корпусов:</strong>
-                <?php foreach ($link['regular_addresses'] as $addr): ?>
-                    <p><?= htmlspecialchars(str_replace(['г. Санкт-Петербург', 'Санкт-Петербург'], 'СПб', $addr['address'])) ?></p>
-                <?php endforeach; ?>
-            </div>
-        <?php endif; ?>
-
         <!-- Пустая строка (отбивка) -->
-        <?php if (!empty($link['website']) || $has_contacts || !empty($link['regular_addresses'])): ?>
+        <?php if (!empty($link['website']) || $has_contacts): ?>
             <div style="height: 1em;"></div>
         <?php endif; ?>
 
@@ -118,11 +108,16 @@
             <p><strong>Срок обучения:</strong> <?= htmlspecialchars($link['duration']) ?></p>
         <?php endif; ?>
 
-        <!-- Адреса проведения программы -->
+        <!-- Адреса проведения программы (ВОЗВРАЩЁН ПРЕЖНИЙ ВИД С СОКРАЩЕНИЕМ СПб) -->
         <?php if (!empty($link['program_address'])): ?>
             <p>
                 <strong>Обучение по адресу:</strong>
-                <?= htmlspecialchars($link['program_address']) ?>
+                <?php 
+                $address = $link['program_address'];
+                // Сокращаем СПб
+                $address = str_replace(['г. Санкт-Петербург', 'Санкт-Петербург'], 'СПб', $address);
+                echo htmlspecialchars($address);
+                ?>
             </p>
         <?php endif; ?>
 

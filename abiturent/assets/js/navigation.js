@@ -137,47 +137,13 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Установка активной кнопки
-    function setActiveButton() {
-        const currentPath = window.location.pathname;
-        const urlParams = new URLSearchParams(window.location.search);
-        const section = urlParams.get('section');
-        
-        // Сбрасываем все активные классы
+    // Убираем класс active со всех кнопок при загрузке страницы
+    function removeActiveClass() {
         [directionsBtn, twoOgeBtn, professionalitetBtn, establishmentsBtn].forEach(btn => {
             if (btn) btn.classList.remove('active');
         });
-        
-        // На главной странице
-        if (currentPath === '/' || currentPath === '/index.php' || currentPath.endsWith('/index.php')) {
-            if (section === 'twoOge') {
-                if (twoOgeBtn) twoOgeBtn.classList.add('active');
-            } else if (section === 'clusters') {
-                if (professionalitetBtn) professionalitetBtn.classList.add('active');
-            } else if (section === 'establishments') {
-                if (establishmentsBtn) establishmentsBtn.classList.add('active');
-            } else {
-                // По умолчанию - направления
-                if (directionsBtn) directionsBtn.classList.add('active');
-            }
-        } 
-        // На странице establishments.php
-        else if (currentPath.includes('establishments.php')) {
-            if (establishmentsBtn) establishmentsBtn.classList.add('active');
-        }
-        // На странице programs.php
-        else if (currentPath.includes('programs.php')) {
-            if (directionsBtn) directionsBtn.classList.add('active');
-        }
-        // На странице cluster.php
-        else if (currentPath.includes('cluster.php')) {
-            if (professionalitetBtn) professionalitetBtn.classList.add('active');
-        }
-        // На странице establishment-programs.php
-        else if (currentPath.includes('establishment-programs.php')) {
-            if (establishmentsBtn) establishmentsBtn.classList.add('active');
-        }
     }
     
-    setActiveButton();
+    // Вызываем функцию удаления active класса
+    removeActiveClass();
 });

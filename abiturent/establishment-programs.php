@@ -32,7 +32,6 @@ include __DIR__ . '/templates/header.php';
 
 ?>
 
-
 <main class="container">
     <div class="left-column">
         <h2 class="main-title" id="pageMainTitle"><?= htmlspecialchars($page_title) ?></h2>
@@ -53,50 +52,6 @@ include __DIR__ . '/templates/header.php';
 
     <?php include __DIR__ . '/templates/map_template.php'; ?>
 </main>
-
-<script>
-    // Передаем данные для карты
-    const mapData = <?= json_encode($links_data, $json_options) ?>;
-    
-    console.log('Передано данных:', mapData.length);
-    
-    // Проверяем наличие map_points и координат
-    let hasCoordinates = false;
-    mapData.forEach((item, index) => {
-        console.log(`Элемент ${index}:`, {
-            name: item.college_name,
-            has_map_points: !!item.map_points,
-            map_points_count: item.map_points?.length || 0,
-            map_points: item.map_points
-        });
-        
-        if (item.map_points && item.map_points.length > 0) {
-            item.map_points.forEach(point => {
-                console.log(`  Точка:`, {
-                    address: point.address,
-                    latitude: point.latitude,
-                    longitude: point.longitude,
-                    type: point.type
-                });
-                if (point.latitude && point.longitude) {
-                    hasCoordinates = true;
-                }
-            });
-        }
-    });
-    
-    console.log('Есть координаты:', hasCoordinates);
-    
-    // Устанавливаем данные в dataset
-    const mapElement = document.getElementById('map');
-    if (mapElement) {
-        mapElement.dataset.links = JSON.stringify(mapData);
-        console.log('✅ Данные установлены в dataset карты');
-    } else {
-        console.error('❌ Элемент #map не найден');
-    }
-</script>
-<script src="assets/js/map.js"></script>
 
 </body>
 </html>
