@@ -25,8 +25,6 @@ if ($establishment_id_filter) {
     $page_title = "Учебное заведение не выбрано";
 }
 
-$conn->close();
-
 $additional_css = 'assets/css/style.css';
 include __DIR__ . '/templates/header.php';
 
@@ -53,5 +51,97 @@ include __DIR__ . '/templates/header.php';
     <?php include __DIR__ . '/templates/map_template.php'; ?>
 </main>
 
+<!-- ПРЯМОЙ ЗАПРОС ДЛЯ КАРТЫ - используем $conn, который еще открыт -->
+<script>
+<?php
+if ($establishment_id_filter && $current_establishment_name) {
+    // Получаем все уникальные координаты из таблицы bundles
+    $sql = "SELECT 
+        b.id,
+        b.program_address,
+        b.program_latitude,
+        b.program_longitude,
+        e.name as college_name
+    FROM bundles b
+    JOIN establishments e ON b.establishment_id = e.id
+    WHERE b.establishment_id = " . intval($establishment_id_filter) . "
+    AND b.program_latitude IS NOT NULL 
+    AND b.program_latitude != ''
+    AND b.program_latitude != 0
+    AND b.program_longitude IS NOT NULL 
+    AND b.program_longitude != ''
+    AND b.program_longitude != 0
+    GROUP BY b.program_latitude, b.program_longitude, b.program_address";
+    
+    $result = $conn->query($sql);
+    $points = [];
+    
+    if ($result && $result->num_rows > 0) {
+        while ($row = $result->fetch_assoc()) {
+            $points[] = [
+                'id' => $row['id'],
+                'name' => $row['college_name'],
+                'address' => $row['program_address'],
+                'latitude' => floatval($row['program_latitude']),
+                'longitude' => floatval($row['program_longitude']),
+                'type' => 'program'
+            ];
+        }
+    }
+    
+    // Если нет координат в bundles, пробуем взять из таблицы addresses
+    if (empty($points)) {
+        $sql2 = "SELECT 
+            a.id,
+            a.address,
+            a.latitude,
+            a.longitude,
+            a.admissions_committee,
+            e.name as college_name
+        FROM addresses a
+        JOIN establishments e ON a.establishment_id = e.id
+        WHERE a.establishment_id = " . intval($establishment_id_filter) . "
+        AND a.latitude IS NOT NULL 
+        AND a.latitude != ''
+        AND a.latitude != 0
+        AND a.longitude IS NOT NULL 
+        AND a.longitude != ''
+        AND a.longitude != 0
+        GROUP BY a.latitude, a.longitude, a.address";
+        
+        $result2 = $conn->query($sql2);
+        
+        if ($result2 && $result2->num_rows > 0) {
+            while ($row = $result2->fetch_assoc()) {
+                $points[] = [
+                    'id' => $row['id'],
+                    'name' => $row['college_name'],
+                    'address' => $row['address'],
+                    'latitude' => floatval($row['latitude']),
+                    'longitude' => floatval($row['longitude']),
+                    'type' => $row['admissions_committee'] == 1 ? 'admission' : 'regular'
+                ];
+            }
+        }
+    }
+    
+    echo "window.mapData = " . json_encode($points, JSON_UNESCAPED_UNICODE) . ";\n";
+    echo "window.linksDataForMap = window.mapData;\n";
+    echo "console.log('✅ Найдено точек для карты:', " . count($points) . ");\n";
+    
+    if (count($points) > 0) {
+        $addresses = array_column($points, 'address');
+        echo "console.log('📍 Адреса:', " . json_encode($addresses, JSON_UNESCAPED_UNICODE) . ");\n";
+    }
+}
+?>
+</script>
+
+<script src="assets/js/map.js"></script>
 </body>
 </html>
+
+<?php
+// Закрываем соединение САМЫМ ПОСЛЕДНИМ
+$conn->close();
+?>

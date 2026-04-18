@@ -101,17 +101,22 @@ function getEstablishmentPhones($conn, $establishment_id) {
  */
 function getEstablishmentAddresses($conn, $establishment_id) {
     $addresses = [];
-    $stmt = $conn->prepare("SELECT address FROM addresses WHERE establishment_id = ?");
+    $stmt = $conn->prepare("SELECT id, address, latitude, longitude, admissions_committee FROM addresses WHERE establishment_id = ? ORDER BY admissions_committee DESC, id");
     $stmt->bind_param("i", $establishment_id);
     $stmt->execute();
     $result = $stmt->get_result();
     while($row = $result->fetch_assoc()) {
-        $addresses[] = $row['address'];
+        $addresses[] = [
+            'id' => $row['id'],
+            'address' => $row['address'],
+            'latitude' => $row['latitude'],
+            'longitude' => $row['longitude'],
+            'admissions_committee' => (bool)$row['admissions_committee']
+        ];
     }
     $stmt->close();
     return $addresses;
 }
-
 /**
  * Сохранение телефонов заведения (упрощенная версия)
  */

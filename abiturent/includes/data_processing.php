@@ -9,48 +9,67 @@ function processProgramData($raw_bundles_data) {
     $links_data = [];
     
     foreach ($raw_bundles_data as $bundle) {
-        global $conn;
-        
         // Разделяем адреса на категории
         $admission_addresses = [];
         $regular_addresses = [];
         $all_map_points = [];
         
+        // 1. Добавляем адреса из таблицы addresses (если есть)
         $all_addresses = $bundle['all_addresses'] ?? [];
         
-        echo "<!-- Отладка: establishment_id = " . ($bundle['establishment_id'] ?? 'null') . ", адресов: " . count($all_addresses) . " -->\n";
-        
         foreach ($all_addresses as $addr) {
-            $point = [
-                'address' => $addr['address'],
-                'latitude' => $addr['latitude'] ? floatval($addr['latitude']) : null,
-                'longitude' => $addr['longitude'] ? floatval($addr['longitude']) : null,
-                'type' => $addr['admissions_committee'] == 1 ? 'admission' : 'regular'
-            ];
-            
-            // Добавляем в соответствующую категорию
-            if ($addr['admissions_committee'] == 1) {
-                $admission_addresses[] = $point;
-            } else {
-                $regular_addresses[] = $point;
-            }
-            
-            // Добавляем в список всех точек для карты (только если есть координаты)
-            if (!empty($point['latitude']) && !empty($point['longitude'])) {
-                $all_map_points[] = $point;
-                echo "<!-- Добавлена точка с координатами: " . $point['address'] . " (" . $point['latitude'] . ", " . $point['longitude'] . ") -->\n";
+            // Проверяем наличие координат
+            if (!empty($addr['latitude']) && !empty($addr['longitude'])) {
+                $lat = floatval($addr['latitude']);
+                $lon = floatval($addr['longitude']);
+                
+                // Проверяем что координаты не нулевые
+                if ($lat != 0 && $lon != 0) {
+                    $point = [
+                        'address' => $addr['address'],
+                        'latitude' => $lat,
+                        'longitude' => $lon,
+                        'type' => $addr['admissions_committee'] == 1 ? 'admission' : 'regular'
+                    ];
+                    
+                    if ($addr['admissions_committee'] == 1) {
+                        $admission_addresses[] = $point;
+                    } else {
+                        $regular_addresses[] = $point;
+                    }
+                    
+                    $all_map_points[] = $point;
+                }
             }
         }
         
-        // Если нет точек с координатами из адресов, используем координаты программы
-        if (empty($all_map_points) && !empty($bundle['program_latitude']) && !empty($bundle['program_longitude'])) {
-            $all_map_points[] = [
-                'address' => $bundle['program_address'] ?? 'Адрес программы',
-                'latitude' => floatval($bundle['program_latitude']),
-                'longitude' => floatval($bundle['program_longitude']),
-                'type' => 'program'
-            ];
-            echo "<!-- Использованы координаты программы: " . ($bundle['program_address'] ?? '') . " -->\n";
+        // 2. ВАЖНО: Добавляем координаты из самой программы (из таблицы bundles)
+        // Это ключевое исправление!
+        if (!empty($bundle['program_latitude']) && !empty($bundle['program_longitude'])) {
+            $lat = floatval($bundle['program_latitude']);
+            $lon = floatval($bundle['program_longitude']);
+            
+            if ($lat != 0 && $lon != 0) {
+                $program_point = [
+                    'address' => $bundle['program_address'] ?? 'Адрес программы',
+                    'latitude' => $lat,
+                    'longitude' => $lon,
+                    'type' => 'program'
+                ];
+                
+                // Проверяем, не добавлен ли уже такой адрес
+                $exists = false;
+                foreach ($all_map_points as $existing_point) {
+                    if ($existing_point['latitude'] == $lat && $existing_point['longitude'] == $lon) {
+                        $exists = true;
+                        break;
+                    }
+                }
+                
+                if (!$exists) {
+                    $all_map_points[] = $program_point;
+                }
+            }
         }
         
         // Получаем телефоны приёмной комиссии
@@ -83,21 +102,18 @@ function processProgramData($raw_bundles_data) {
             'regular_addresses' => $regular_addresses,
             'admission_phones' => $admission_phones,
             'regular_phones' => $regular_phones,
-            'map_points' => $all_map_points,
+            'map_points' => $all_map_points, // Теперь здесь будут ВСЕ координаты
             'program_attributes_array' => !empty($bundle['program_attributes']) ? array_map('trim', explode(',', $bundle['program_attributes'])) : [],
             'is_professionalitet' => !empty($bundle['cluster_id']),
             'cluster_name' => $bundle['actual_cluster_name'] ?? '',
-            'latitude' => !empty($all_map_points) ? $all_map_points[0]['latitude'] : null,
-            'longitude' => !empty($all_map_points) ? $all_map_points[0]['longitude'] : null,
+            'latitude' => !empty($bundle['program_latitude']) ? floatval($bundle['program_latitude']) : null,
+            'longitude' => !empty($bundle['program_longitude']) ? floatval($bundle['program_longitude']) : null,
             'search_text' => ($bundle['establishment_name'] ?? '') . ' ' . ($bundle['program_name'] ?? '')
         ];
     }
     
     return $links_data;
 }
-
-// Остальные функции остаются без изменений...
-
 
 /**
  * Обработка данных учебных заведений

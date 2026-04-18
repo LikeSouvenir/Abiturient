@@ -11,81 +11,122 @@ function getEstablishmentName($conn, $id)
     return $data['name'] ?? null;
 }
 
-function getProgramsByEstablishment($conn, $establishment_id)
-{
-    $sql = "
-        SELECT
-            b.id as bundle_id,
-            b.education_type,
-            b.education_base,
-            b.duration,
-            b.program_address,
-            b.program_latitude,
-            b.program_longitude,
-            b.cluster_id,
-            e.id as establishment_id,
-            e.name as establishment_name,
-            e.logo_path as establishment_logo_path,
-            e.website as establishment_website,
-            p.id as program_id,
-            p.name as program_name,
-            p.program_code as program_code_val,
-            p.attributes as program_attributes,
-            cls.name as actual_cluster_name
+/**
+ * Получение всех программ учебного заведения с адресами и телефонами
+ */
+function getProgramsByEstablishment($conn, $establishment_id) {
+    $bundles = [];
+    
+    // Основной запрос (используем program_code)
+    $sql = "SELECT 
+        b.id as bundle_id,
+        b.establishment_id,
+        b.program_id,
+        b.education_type,
+        b.education_base,
+        b.duration,
+        b.cluster_id,
+        b.program_address,
+        b.program_latitude,
+        b.program_longitude,
+        b.created_at,
+        e.name as establishment_name,
+        e.logo_path as establishment_logo_path,
+        e.website as establishment_website,
+        p.name as program_name,
+        p.program_code,
+        p.attributes as program_attributes,
+        p.image_path as program_image_path,
+        c.name as cluster_name
     FROM bundles b
     JOIN establishments e ON b.establishment_id = e.id
     JOIN programs p ON b.program_id = p.id
-    LEFT JOIN clusters cls ON b.cluster_id = cls.id
+    LEFT JOIN clusters c ON b.cluster_id = c.id
     WHERE b.establishment_id = ?
-    ORDER BY p.name
-    ";
+    ORDER BY p.name";
     
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("i", $establishment_id);
     $stmt->execute();
     $result = $stmt->get_result();
-    $data = $result->fetch_all(MYSQLI_ASSOC);
+    
+    while ($row = $result->fetch_assoc()) {
+        // Получаем адреса из таблицы addresses
+        $addresses_sql = "SELECT 
+            id,
+            address,
+            latitude,
+            longitude,
+            admissions_committee
+        FROM addresses 
+        WHERE establishment_id = ?";
+        
+        $addr_stmt = $conn->prepare($addresses_sql);
+        $addr_stmt->bind_param("i", $establishment_id);
+        $addr_stmt->execute();
+        $addr_result = $addr_stmt->get_result();
+        
+        $addresses = [];
+        while ($addr = $addr_result->fetch_assoc()) {
+            $addresses[] = [
+                'address' => $addr['address'],
+                'latitude' => $addr['latitude'],
+                'longitude' => $addr['longitude'],
+                'admissions_committee' => $addr['admissions_committee']
+            ];
+        }
+        $addr_stmt->close();
+        
+        // Получаем телефоны из таблицы phones
+        $phones_sql = "SELECT 
+            id,
+            phone,
+            admissions_committee
+        FROM phones 
+        WHERE establishment_id = ?";
+        
+        $phone_stmt = $conn->prepare($phones_sql);
+        $phone_stmt->bind_param("i", $establishment_id);
+        $phone_stmt->execute();
+        $phone_result = $phone_stmt->get_result();
+        
+        $phones = [];
+        while ($phone = $phone_result->fetch_assoc()) {
+            $phones[] = [
+                'phone' => $phone['phone'],
+                'admissions_committee' => $phone['admissions_committee']
+            ];
+        }
+        $phone_stmt->close();
+        
+        $bundles[] = [
+            'bundle_id' => $row['bundle_id'],
+            'establishment_id' => $row['establishment_id'],
+            'program_id' => $row['program_id'],
+            'establishment_name' => $row['establishment_name'],
+            'establishment_logo_path' => $row['establishment_logo_path'],
+            'establishment_website' => $row['establishment_website'],
+            'program_name' => $row['program_name'],
+            'program_code' => $row['program_code'],
+            'program_attributes' => $row['program_attributes'],
+            'program_image_path' => $row['program_image_path'],
+            'education_type' => $row['education_type'],
+            'education_base' => $row['education_base'],
+            'duration' => $row['duration'],
+            'program_address' => $row['program_address'],
+            'program_latitude' => $row['program_latitude'],
+            'program_longitude' => $row['program_longitude'],
+            'cluster_id' => $row['cluster_id'],
+            'cluster_name' => $row['cluster_name'],
+            'created_at' => $row['created_at'],
+            'all_addresses' => $addresses,
+            'all_phones' => $phones
+        ];
+    }
     $stmt->close();
     
-    // Для каждого bundle получаем ВСЕ адреса и телефоны
-    foreach ($data as &$bundle) {
-        // Получаем ВСЕ адреса учебного заведения с координатами
-        $stmt_addr = $conn->prepare("SELECT address, latitude, longitude, admissions_committee FROM addresses WHERE establishment_id = ?");
-        $stmt_addr->bind_param("i", $establishment_id);
-        $stmt_addr->execute();
-        $result_addr = $stmt_addr->get_result();
-        $addresses = [];
-        while ($row = $result_addr->fetch_assoc()) {
-            // Преобразуем координаты в float, если они не NULL
-            $row['latitude'] = $row['latitude'] ? floatval($row['latitude']) : null;
-            $row['longitude'] = $row['longitude'] ? floatval($row['longitude']) : null;
-            $addresses[] = $row;
-        }
-        $stmt_addr->close();
-        $bundle['all_addresses'] = $addresses;
-        
-        // Получаем ВСЕ телефоны учебного заведения
-        $stmt_phone = $conn->prepare("SELECT phone, admissions_committee FROM phones WHERE establishment_id = ?");
-        $stmt_phone->bind_param("i", $establishment_id);
-        $stmt_phone->execute();
-        $result_phone = $stmt_phone->get_result();
-        $phones = [];
-        while ($row = $result_phone->fetch_assoc()) {
-            $phones[] = $row;
-        }
-        $stmt_phone->close();
-        $bundle['all_phones'] = $phones;
-        
-        // Отладка
-        error_log("Establishment ID: $establishment_id, Addresses found: " . count($addresses));
-        foreach ($addresses as $addr) {
-            error_log("  Address: {$addr['address']}, Lat: {$addr['latitude']}, Lon: {$addr['longitude']}, Committee: {$addr['admissions_committee']}");
-        }
-    }
-    
-    return $data;
+    return $bundles;
 }
-// Функция для получения названия программы по коду
 function getProgramNameByCode($conn, $program_code) {
     $stmt = $conn->prepare("SELECT name FROM programs WHERE program_code = ?");
     $stmt->bind_param("s", $program_code);
