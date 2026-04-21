@@ -7,6 +7,7 @@
 -- Версия сервера: 10.5.29-MariaDB-0+deb11u1
 -- Версия PHP: 7.4.33
 
+USE abiturent_v2;
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
 SET time_zone = "+00:00";
